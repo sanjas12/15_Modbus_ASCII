@@ -28,7 +28,7 @@ def plc(data):
             print(data[0], "write to PLC:")
         else:
             print(" unable to write ")
-        time.sleep(0.5)
+        # time.sleep(0.5)
         data_read = c.read_holding_registers(addr, 1)
 
         print('data from PLC: ', data_read)
@@ -37,7 +37,7 @@ def plc(data):
 
         # print(data, bits)
 
-    time.sleep(1)
+    # time.sleep(1)
 
 
 if __name__ == '__main__':
