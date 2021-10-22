@@ -4,7 +4,7 @@ import time
 SERVER_HOST = '10.10.88.19'
 SERVER_PORT = 502
 addr = 998
-data = [0]
+# data = [0]
 
 c = ModbusClient()
 
@@ -16,7 +16,7 @@ c.host(SERVER_HOST)
 c.port(SERVER_PORT)
 
 
-def plc():
+def plc(data):
     # open or reconnect TCP to server
     if not c.is_open():
         if not c.open():
@@ -25,19 +25,22 @@ def plc():
     if c.is_open():
         is_ok = c.write_multiple_registers(addr, data)
         if is_ok:
-            print("data : write to ")
+            print(data[0], "write to PLC:")
         else:
             print(" unable to write ")
         time.sleep(0.5)
         bits = c.read_coils(addr, 1)
 
-        data[0] = data[0] + 3
+        # data[0] = data[0] + 3
 
         # print(data, bits)
 
-    time.sleep(2)
+    time.sleep(1)
 
 
 if __name__ == '__main__':
+    data = [0]
     while True:
-        plc()
+        print(type(data), len(data))
+        plc(data)
+        data[0] = data[0] + 3

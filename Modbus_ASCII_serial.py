@@ -11,6 +11,8 @@ def run_sync_client():
 
     print('ADAM:', data/1000, 'V')
 
+    return data
+
 
 if __name__ == '__main__':
     while True:
