@@ -1,30 +1,43 @@
-from pymodbus.client.sync import ModbusTcpClient as ModbusClient
+from pyModbusTCP.client import ModbusClient
+import time
 
-ipadr = 'localhost'
-ipadr = '192.168.110.2'
-ipadr = '10.10.88.19'
+SERVER_HOST = '10.10.88.19'
+SERVER_PORT = 502
+addr = 998
+data = [0]
 
+c = ModbusClient()
 
-import logging
-FORMAT = ('%(asctime)-15s %(threadName)-15s '
-          '%(levelname)-8s %(module)-15s:%(lineno)-8s %(message)s')
-logging.basicConfig(format=FORMAT)
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+# uncomment this line to see debug message
+# c.debug(True)
 
-UNIT = 0x1
-
-
-client = ModbusClient(ipadr, port=5020)
-    # from pymodbus.transaction import ModbusRtuFramer
-    # client = ModbusClient('localhost', port=5020, framer=ModbusRtuFramer)
-    # client = ModbusClient(method='binary', port='/dev/ptyp0', timeout=1)
-    # client = ModbusClient(method='ascii', port='/dev/ptyp0', timeout=1)
-    # client = ModbusClient(method='rtu', port='/dev/ptyp0', timeout=1,
-    #                       baudrate=9600)
-client.connect()
+# define modbus server host, port
+c.host(SERVER_HOST)
+c.port(SERVER_PORT)
 
 
-log.debug("Reading Coils")
-rr = client.read_coils(1, 1, unit=UNIT)
-log.debug(rr)
+def plc():
+    # open or reconnect TCP to server
+    if not c.is_open():
+        if not c.open():
+            print("unable to connect to "+SERVER_HOST+":"+str(SERVER_PORT))
+
+    if c.is_open():
+        is_ok = c.write_multiple_registers(addr, data)
+        if is_ok:
+            print("data : write to ")
+        else:
+            print(" unable to write ")
+        time.sleep(0.5)
+        bits = c.read_coils(addr, 1)
+
+        data[0] = data[0] + 3
+
+        # print(data, bits)
+
+    time.sleep(2)
+
+
+if __name__ == '__main__':
+    while True:
+        plc()

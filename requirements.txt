@@ -1,3 +1,5 @@
 pymodbus
 minimalmodbus
 pyserial
+pyModbusTCP
+pytest
