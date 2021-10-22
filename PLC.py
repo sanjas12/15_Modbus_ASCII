@@ -29,7 +29,9 @@ def plc(data):
         else:
             print(" unable to write ")
         time.sleep(0.5)
-        bits = c.read_coils(addr, 1)
+        data_read = c.read_holding_registers(addr, 1)
+
+        print('data from PLC: ', data_read)
 
         # data[0] = data[0] + 3
 
@@ -41,6 +43,5 @@ def plc(data):
 if __name__ == '__main__':
     data = [0]
     while True:
-        print(type(data), len(data))
         plc(data)
         data[0] = data[0] + 3
