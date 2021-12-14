@@ -41,7 +41,7 @@ def request():
     return data
 
 
-def all_response(data):
+def all_response(data: bytes):
 
     temperature = data[12]/10
     print('Teмпература:', temperature)
