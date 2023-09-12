@@ -13,11 +13,13 @@ def dec_to_ma(dec):
     ma = ((ValMax-ValMin)*(dec-Amin))/(Amax-Amin) + (ValMin + shift) 
     return ma
 
-while True:
+def adam_6017():
     data_read = cl.read_holding_registers(1, 8)     # 1 - соответствует адресу 40001  по ADAM-6000_User_Manaul_Ed.10-FINAL.pdf
                                                     #  стр. 217
     print(f'data from ADAM_6017 ch_0:  {data_read[0]}, {round(dec_to_ma(data_read[0]), 2)} mA')
     time.sleep(0.1)
 
 
-
+if __name__ == '__main__':
+    while True:
+        adam_6017()
