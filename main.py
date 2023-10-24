@@ -1,5 +1,5 @@
-import ADAM_4017
-import PLC
+import modbus_tcp.ADAM_4017 as ADAM_4017
+import modbus_tcp.PLC as PLC
 
 while True:
     print('*'*20)
