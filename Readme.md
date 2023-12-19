@@ -16,3 +16,7 @@ indicator_t42.py - обмен с индикатором Т42 для дока
 31F9 - CRC
 
 https://crccalc.com/ - расчет crc  CRC-16/MODBUS
+
+
+<!-- стандартный запрос modbus tcp (02 04 0000 0001 31F9) -->
+https://ipc2u.com/articles/knowledge-base/detailed-description-of-the-modbus-tcp-protocol-with-command-examples/
