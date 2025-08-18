@@ -124,7 +124,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
 
         # UI controls created in __init__ to satisfy static analysis
         # Connection
-        self.edit_ip = QtWidgets.QLineEdit("192.168.0.1")
+        self.edit_ip = QtWidgets.QLineEdit("192.168.0.20")
         self.spin_port = QtWidgets.QSpinBox()
         self.spin_unit = QtWidgets.QSpinBox()
         self.btn_connect = QtWidgets.QPushButton("Подключиться")
@@ -498,7 +498,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self._submit(self.modbus.write_single_register, after, address, reg_val)
 
     def on_read_frequency(self) -> None:
-        address = 0x2001
+        address = 0x3000
         def after(data: Optional[List[int]]) -> None:
             if not data:
                 self.log("RI350: чтение частоты — пусто")
