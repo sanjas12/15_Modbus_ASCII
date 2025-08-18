@@ -2,8 +2,9 @@ import sys
 import threading
 from typing import List, Optional
 
-from pyModbusTCP.client import ModbusClient
 from PyQt5 import QtCore, QtWidgets
+from modbus_client import ModbusClientWrapper
+from telemetry import decode_state1, decode_state2_fields
 
 
 class WorkerSignals(QtCore.QObject):
@@ -28,96 +29,11 @@ class Runnable(QtCore.QRunnable):
             self.signals.error.emit(str(exc))
 
 
-class ModbusClientWrapper:
-    def __init__(self) -> None:
-        # Client is created in configure()
-        self._client: Optional[ModbusClient] = None
-        self._lock = threading.Lock()
-
-    def configure(self, host: str, port: int, unit_id: int) -> None:
-        with self._lock:
-            if self._client is not None:
-                try:
-                    self._client.close()
-                except Exception:  # noqa: BLE001
-                    pass
-            # Recreate client with explicit params to avoid API ambiguity
-            self._client = ModbusClient(
-                host=host,
-                port=port,
-                unit_id=unit_id,
-                auto_open=True,
-                auto_close=False,
-                timeout=3.0,
-            )
-
-    def open(self) -> bool:
-        with self._lock:
-            if self._client is None:
-                raise RuntimeError("Клиент не сконфигурирован")
-            return bool(self._client.open())
-
-    def close(self) -> None:
-        with self._lock:
-            if self._client is not None:
-                self._client.close()
-
-    # --- Read operations ---
-    def read_holding(self, address: int, quantity: int) -> Optional[List[int]]:
-        with self._lock:
-            if self._client is None:
-                raise RuntimeError("Клиент не сконфигурирован")
-            return self._client.read_holding_registers(address, quantity)
-
-    def read_input(self, address: int, quantity: int) -> Optional[List[int]]:
-        with self._lock:
-            if self._client is None:
-                raise RuntimeError("Клиент не сконфигурирован")
-            return self._client.read_input_registers(address, quantity)
-
-    def read_coils(self, address: int, quantity: int) -> Optional[List[bool]]:
-        with self._lock:
-            if self._client is None:
-                raise RuntimeError("Клиент не сконфигурирован")
-            return self._client.read_coils(address, quantity)
-
-    def read_discrete_inputs(self, address: int, quantity: int) -> Optional[List[bool]]:
-        with self._lock:
-            if self._client is None:
-                raise RuntimeError("Клиент не сконфигурирован")
-            return self._client.read_discrete_inputs(address, quantity)
-
-    # --- Write operations ---
-    def write_single_register(self, address: int, value: int) -> bool:
-        with self._lock:
-            if self._client is None:
-                raise RuntimeError("Клиент не сконфигурирован")
-            return bool(self._client.write_single_register(address, value))
-
-    def write_multiple_registers(self, address: int, values: List[int]) -> bool:
-        with self._lock:
-            if self._client is None:
-                raise RuntimeError("Клиент не сконфигурирован")
-            return bool(self._client.write_multiple_registers(address, values))
-
-    def write_single_coil(self, address: int, value: bool) -> bool:
-        with self._lock:
-            if self._client is None:
-                raise RuntimeError("Клиент не сконфигурирован")
-            return bool(self._client.write_single_coil(address, value))
-
-    def write_multiple_coils(self, address: int, values: List[bool]) -> bool:
-        with self._lock:
-            if self._client is None:
-                raise RuntimeError("Клиент не сконфигурирован")
-            return bool(self._client.write_multiple_coils(address, values))
-
-
 class VFDModbusWindow(QtWidgets.QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("VFD Modbus TCP")
-        self.resize(820, 560)
+        self.setWindowTitle("RI-350-19")
+        self.resize(820, 760)
 
         self.modbus = ModbusClientWrapper()
         self.thread_pool = QtCore.QThreadPool.globalInstance()
@@ -169,7 +85,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self.spin_tel_period = QtWidgets.QSpinBox()
         self.spin_tel_period.setRange(100, 10000)
         self.spin_tel_period.setSingleStep(100)
-        self.spin_tel_period.setValue(1000)
+        self.spin_tel_period.setValue(300)
         # Auto-refresh runtime
         self.telemetry_timer = QtCore.QTimer(self)
         self._connected: bool = False
@@ -189,7 +105,12 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         central = QtWidgets.QWidget(self)
         self.setCentralWidget(central)
 
-        layout = QtWidgets.QVBoxLayout(central)
+        # Главный контейнер: горизонтально (слева UI, справа журнал)
+        layout_main = QtWidgets.QHBoxLayout()
+        central.setLayout(layout_main)
+        # Левая и правая колонки как вложенные лэйауты
+        layout = QtWidgets.QVBoxLayout()
+        layout_2 = QtWidgets.QVBoxLayout()
 
         # Connection controls
         conn_box = QtWidgets.QGroupBox("Подключение")
@@ -221,13 +142,19 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         log_box = QtWidgets.QGroupBox("Журнал")
         log_layout = QtWidgets.QVBoxLayout(log_box)
         self.text_log.setReadOnly(True)
+        # Сделаем окно журнала крупнее по высоте
+        self.text_log.setMinimumHeight(400)
         log_layout.addWidget(self.text_log)
 
         layout.addWidget(conn_box)
         layout.addWidget(tabs)
         # Telemetry group below RI350 tab and before log
         layout.addWidget(self._build_telemetry_group())
-        layout.addWidget(log_box)
+                
+        layout_2.addWidget(log_box)
+
+        layout_main.addLayout(layout)
+        layout_main.addLayout(layout_2)
 
     def _build_read_tab(self) -> QtWidgets.QWidget:
         page = QtWidgets.QWidget()
@@ -441,7 +368,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         def after_first(data1: Optional[List[int]]):
             val1 = data1[0] if data1 and len(data1) > 0 else None
             if val1 is not None:
-                self.lbl_tel_state1.setText(self._decode_state1(int(val1)))
+                self.lbl_tel_state1.setText(decode_state1(int(val1)))
                 self.lbl_tel_state1_raw.setText(f"0x{int(val1):04X}")
             else:
                 self.lbl_tel_state1.setText("—")
@@ -450,7 +377,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
             def after_second(data2: Optional[List[int]]):
                 val2 = data2[0] if data2 and len(data2) > 0 else None
                 if val2 is not None:
-                    fields = self._decode_state2_fields(int(val2))
+                    fields = decode_state2_fields(int(val2))
                     self.lbl_tel_ready.setText("Готов" if fields["ready"] else "Не готов")
                     self.lbl_tel_motor_sel.setText(fields["motor_sel"])
                     self.lbl_tel_motor_type.setText(fields["motor_type"])
@@ -558,8 +485,12 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
 
         def after_connect(ok: bool) -> None:
             self._set_status(bool(ok))
-            self.log(f"Подключение к {host}:{port} — {'OK' if ok else 'НЕ УДАЛОСЬ'}")
-            self._start_telemetry_timer()
+            self.log(f"Подключение к {host}:{port} — {'OK' if ok else 'Нет подключания'}")
+            if ok:
+                # Автоматически включаем автообновление и делаем мгновенное обновление
+                self.chk_tel_auto.setChecked(True)
+                self._start_telemetry_timer()
+                self.on_refresh_telemetry()
 
         self._submit(self.modbus.open, after_connect)
 
