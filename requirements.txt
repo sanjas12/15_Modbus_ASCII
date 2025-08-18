@@ -3,3 +3,4 @@ minimalmodbus
 pyserial
 pyModbusTCP
 pytest
+PyQt5
