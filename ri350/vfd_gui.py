@@ -165,6 +165,15 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self.lbl_tel_vector = QtWidgets.QLabel("—")
         self.lbl_tel_state2_raw = QtWidgets.QLabel("—")
         self.btn_refresh_tel = QtWidgets.QPushButton("Обновить")
+        self.chk_tel_auto = QtWidgets.QCheckBox("Автообновление")
+        self.spin_tel_period = QtWidgets.QSpinBox()
+        self.spin_tel_period.setRange(100, 10000)
+        self.spin_tel_period.setSingleStep(100)
+        self.spin_tel_period.setValue(1000)
+        # Auto-refresh runtime
+        self.telemetry_timer = QtCore.QTimer(self)
+        self._connected: bool = False
+        self._tel_busy: bool = False
         # RI350 setpoints
         self.spin_freq = QtWidgets.QDoubleSpinBox()
         self.btn_set_freq = QtWidgets.QPushButton("Задать частоту")
@@ -286,6 +295,12 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self.btn_cmd_jog_to_stop.clicked.connect(lambda: self.send_ri350_command(0x0008, "Толчок для останова"))
         # Telemetry
         self.btn_refresh_tel.clicked.connect(self.on_refresh_telemetry)
+        self.telemetry_timer.timeout.connect(self.on_refresh_telemetry)
+        self.chk_tel_auto.toggled.connect(lambda _checked: self._start_telemetry_timer())
+        self.spin_tel_period.valueChanged.connect(lambda _v: self._start_telemetry_timer())
+        self.telemetry_timer.timeout.connect(self.on_refresh_telemetry)
+        self.chk_tel_auto.toggled.connect(lambda _checked: self._start_telemetry_timer())
+        self.spin_tel_period.valueChanged.connect(lambda _v: self._start_telemetry_timer())
         # RI350 setpoints
         self.btn_set_freq.clicked.connect(self.on_set_frequency)
         self.btn_read_freq.clicked.connect(self.on_read_frequency)
@@ -374,7 +389,10 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         layout.addWidget(QtWidgets.QLabel("RAW"), r, 0)
         layout.addWidget(self.lbl_tel_state2_raw, r, 1); r += 1
 
-        layout.addWidget(self.btn_refresh_tel, r, 0, 1, 2)
+        layout.addWidget(self.btn_refresh_tel, r, 0)
+        layout.addWidget(self.chk_tel_auto, r, 1)
+        layout.addWidget(QtWidgets.QLabel("Период, мс"), r, 2)
+        layout.addWidget(self.spin_tel_period, r, 3)
 
         return page
 
@@ -416,6 +434,9 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         }
 
     def on_refresh_telemetry(self) -> None:
+        if getattr(self, "_tel_busy", False):
+            return
+        self._tel_busy = True
         # Read 0x2100 and 0x2101 sequentially and update labels
         def after_first(data1: Optional[List[int]]):
             val1 = data1[0] if data1 and len(data1) > 0 else None
@@ -455,7 +476,17 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
 
             self._submit(self.modbus.read_holding, after_second, 0x2101, 1)
 
-        self._submit(self.modbus.read_holding, after_first, 0x2100, 1)
+        def release_flag(_res=None):
+            self._tel_busy = False
+
+        # chain completion to reset busy flag
+        def wrapped_after_first(data1: Optional[List[int]]):
+            try:
+                after_first(data1)
+            finally:
+                release_flag()
+
+        self._submit(self.modbus.read_holding, wrapped_after_first, 0x2100, 1)
 
     # --- RI350 setpoints handlers ---
     def on_set_frequency(self) -> None:
@@ -504,12 +535,19 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
     def _set_status(self, ok: bool) -> None:
         self.lbl_status.setText("Подключено" if ok else "Отключено")
         self.lbl_status.setStyleSheet("color: #0a0;" if ok else "color: #a00;")
+        self._connected = bool(ok)
 
     def _submit(self, fn, on_result, *args, **kwargs) -> None:
         job = Runnable(fn, *args, **kwargs)
         job.signals.result.connect(on_result)
         job.signals.error.connect(lambda e: self.log(f"Ошибка: {e}"))
         self.thread_pool.start(job)
+
+    def _start_telemetry_timer(self) -> None:
+        self.telemetry_timer.stop()
+        self.telemetry_timer.setInterval(int(self.spin_tel_period.value()))
+        if self._connected and self.chk_tel_auto.isChecked():
+            self.telemetry_timer.start()
 
     # --- Slots ---
     def on_connect(self) -> None:
@@ -521,6 +559,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         def after_connect(ok: bool) -> None:
             self._set_status(bool(ok))
             self.log(f"Подключение к {host}:{port} — {'OK' if ok else 'НЕ УДАЛОСЬ'}")
+            self._start_telemetry_timer()
 
         self._submit(self.modbus.open, after_connect)
 
@@ -528,6 +567,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self.modbus.close()
         self._set_status(False)
         self.log("Соединение закрыто")
+        self.telemetry_timer.stop()
 
     def on_read(self) -> None:
         func = self.combo_read_func.currentText()
