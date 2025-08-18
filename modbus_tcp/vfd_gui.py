@@ -34,9 +34,19 @@ class ModbusClientWrapper:
         self._client: Optional[ModbusClient] = None
         self._lock = threading.Lock()
 
+    def _is_open(self) -> bool:
+        if self._client is None:
+            return False
+        attr = getattr(self._client, "is_open", None)
+        if callable(attr):
+            return bool(attr())
+        if isinstance(attr, bool):
+            return attr
+        return False
+
     def configure(self, host: str, port: int, unit_id: int) -> None:
         with self._lock:
-            if self._client is not None and self._client.is_open():
+            if self._client is not None and self._is_open():
                 self._client.close()
             # Recreate client with explicit params to avoid API ambiguity
             self._client = ModbusClient(
@@ -52,7 +62,7 @@ class ModbusClientWrapper:
         with self._lock:
             if self._client is None:
                 raise RuntimeError("Клиент не сконфигурирован")
-            if not self._client.is_open():
+            if not self._is_open():
                 return self._client.open()
             return True
 
@@ -121,23 +131,36 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self.modbus = ModbusClientWrapper()
         self.thread_pool = QtCore.QThreadPool.globalInstance()
 
-        # Predeclare attributes for linters
-        self.edit_ip = None
-        self.spin_port = None
-        self.spin_unit = None
-        self.btn_connect = None
-        self.btn_disconnect = None
-        self.lbl_status = None
-        self.text_log = None
-        self.combo_read_func = None
-        self.spin_read_address = None
-        self.spin_read_quantity = None
-        self.btn_read = None
-        self.table_read = None
-        self.combo_write_func = None
-        self.spin_write_address = None
-        self.edit_values = None
-        self.btn_write = None
+        # UI controls created in __init__ to satisfy static analysis
+        # Connection
+        self.edit_ip = QtWidgets.QLineEdit("192.168.0.10")
+        self.spin_port = QtWidgets.QSpinBox()
+        self.spin_unit = QtWidgets.QSpinBox()
+        self.btn_connect = QtWidgets.QPushButton("Подключиться")
+        self.btn_disconnect = QtWidgets.QPushButton("Отключиться")
+        self.lbl_status = QtWidgets.QLabel("Отключено")
+        # Log
+        self.text_log = QtWidgets.QPlainTextEdit()
+        # Read tab controls
+        self.combo_read_func = QtWidgets.QComboBox()
+        self.spin_read_address = QtWidgets.QSpinBox()
+        self.spin_read_quantity = QtWidgets.QSpinBox()
+        self.btn_read = QtWidgets.QPushButton("Читать")
+        self.table_read = QtWidgets.QTableWidget(0, 2)
+        # Write tab controls
+        self.combo_write_func = QtWidgets.QComboBox()
+        self.spin_write_address = QtWidgets.QSpinBox()
+        self.edit_values = QtWidgets.QLineEdit()
+        self.btn_write = QtWidgets.QPushButton("Записать")
+        # RI350 controls
+        self.btn_cmd_fwd = QtWidgets.QPushButton("Вперед")
+        self.btn_cmd_rev = QtWidgets.QPushButton("Назад")
+        self.btn_cmd_jog_fwd = QtWidgets.QPushButton("Толчок вперед")
+        self.btn_cmd_jog_rev = QtWidgets.QPushButton("Толчок назад")
+        self.btn_cmd_stop = QtWidgets.QPushButton("Стоп")
+        self.btn_cmd_estop = QtWidgets.QPushButton("Аварийный останов")
+        self.btn_cmd_reset = QtWidgets.QPushButton("Сброс ошибки")
+        self.btn_cmd_jog_to_stop = QtWidgets.QPushButton("Толчок для останова")
 
         self._build_ui()
         self._wire_signals()
@@ -151,16 +174,10 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         # Connection controls
         conn_box = QtWidgets.QGroupBox("Подключение")
         conn_layout = QtWidgets.QGridLayout(conn_box)
-        self.edit_ip = QtWidgets.QLineEdit("192.168.0.10")
-        self.spin_port = QtWidgets.QSpinBox()
         self.spin_port.setRange(1, 65535)
         self.spin_port.setValue(502)
-        self.spin_unit = QtWidgets.QSpinBox()
         self.spin_unit.setRange(0, 255)
         self.spin_unit.setValue(1)
-        self.btn_connect = QtWidgets.QPushButton("Подключиться")
-        self.btn_disconnect = QtWidgets.QPushButton("Отключиться")
-        self.lbl_status = QtWidgets.QLabel("Отключено")
         self.lbl_status.setStyleSheet("color: #a00;")
 
         conn_layout.addWidget(QtWidgets.QLabel("IP"), 0, 0)
@@ -178,11 +195,11 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         tabs = QtWidgets.QTabWidget()
         tabs.addTab(self._build_read_tab(), "Чтение")
         tabs.addTab(self._build_write_tab(), "Запись")
+        tabs.addTab(self._build_ri350_tab(), "RI350")
 
         # Log
         log_box = QtWidgets.QGroupBox("Журнал")
         log_layout = QtWidgets.QVBoxLayout(log_box)
-        self.text_log = QtWidgets.QPlainTextEdit()
         self.text_log.setReadOnly(True)
         log_layout.addWidget(self.text_log)
 
@@ -194,20 +211,15 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         page = QtWidgets.QWidget()
         layout = QtWidgets.QGridLayout(page)
 
-        self.combo_read_func = QtWidgets.QComboBox()
         self.combo_read_func.addItems([
             "Holding Registers (0x03)",
             "Input Registers (0x04)",
             "Coils (0x01)",
             "Discrete Inputs (0x02)",
         ])
-        self.spin_read_address = QtWidgets.QSpinBox()
         self.spin_read_address.setRange(0, 65535)
-        self.spin_read_quantity = QtWidgets.QSpinBox()
         self.spin_read_quantity.setRange(1, 125)
         self.spin_read_quantity.setValue(1)
-        self.btn_read = QtWidgets.QPushButton("Читать")
-        self.table_read = QtWidgets.QTableWidget(0, 2)
         self.table_read.setHorizontalHeaderLabels(["Адрес", "Значение"])
         self.table_read.horizontalHeader().setStretchLastSection(True)
 
@@ -226,18 +238,14 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         page = QtWidgets.QWidget()
         layout = QtWidgets.QGridLayout(page)
 
-        self.combo_write_func = QtWidgets.QComboBox()
         self.combo_write_func.addItems([
             "Single Register (0x06)",
             "Multiple Registers (0x10)",
             "Single Coil (0x05)",
             "Multiple Coils (0x0F)",
         ])
-        self.spin_write_address = QtWidgets.QSpinBox()
         self.spin_write_address.setRange(0, 65535)
-        self.edit_values = QtWidgets.QLineEdit()
         self.edit_values.setPlaceholderText("значения через запятую, напр.: 100,200,300 или true,false")
-        self.btn_write = QtWidgets.QPushButton("Записать")
 
         layout.addWidget(QtWidgets.QLabel("Функция"), 0, 0)
         layout.addWidget(self.combo_write_func, 0, 1, 1, 2)
@@ -254,6 +262,38 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self.btn_disconnect.clicked.connect(self.on_disconnect)
         self.btn_read.clicked.connect(self.on_read)
         self.btn_write.clicked.connect(self.on_write)
+        # RI350
+        self.btn_cmd_fwd.clicked.connect(lambda: self.send_ri350_command(0x0001, "Вперед"))
+        self.btn_cmd_rev.clicked.connect(lambda: self.send_ri350_command(0x0002, "Назад"))
+        self.btn_cmd_jog_fwd.clicked.connect(lambda: self.send_ri350_command(0x0003, "Толчок вперед"))
+        self.btn_cmd_jog_rev.clicked.connect(lambda: self.send_ri350_command(0x0004, "Толчок назад"))
+        self.btn_cmd_stop.clicked.connect(lambda: self.send_ri350_command(0x0005, "Стоп"))
+        self.btn_cmd_estop.clicked.connect(lambda: self.send_ri350_command(0x0006, "Аварийный останов"))
+        self.btn_cmd_reset.clicked.connect(lambda: self.send_ri350_command(0x0007, "Сброс ошибки"))
+        self.btn_cmd_jog_to_stop.clicked.connect(lambda: self.send_ri350_command(0x0008, "Толчок для останова"))
+
+    def _build_ri350_tab(self) -> QtWidgets.QWidget:
+        page = QtWidgets.QWidget()
+        layout = QtWidgets.QGridLayout(page)
+
+        # Layout: 2 columns of commands
+        layout.addWidget(QtWidgets.QLabel("Команды управления (регистр 0x2000)"), 0, 0, 1, 2)
+        layout.addWidget(self.btn_cmd_fwd, 1, 0)
+        layout.addWidget(self.btn_cmd_rev, 1, 1)
+        layout.addWidget(self.btn_cmd_jog_fwd, 2, 0)
+        layout.addWidget(self.btn_cmd_jog_rev, 2, 1)
+        layout.addWidget(self.btn_cmd_stop, 3, 0)
+        layout.addWidget(self.btn_cmd_estop, 3, 1)
+        layout.addWidget(self.btn_cmd_reset, 4, 0)
+        layout.addWidget(self.btn_cmd_jog_to_stop, 4, 1)
+
+        return page
+
+    def send_ri350_command(self, code: int, title: str) -> None:
+        address = 0x2000
+        def after(ok: bool) -> None:
+            self.log(f"RI350: {title} → регистр 0x{address:04X} значение 0x{code:04X} — {'OK' if ok else 'ОШИБКА'}")
+        self._submit(self.modbus.write_single_register, after, address, int(code))
 
     # --- Helpers ---
     def log(self, message: str) -> None:
