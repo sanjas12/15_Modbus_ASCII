@@ -33,7 +33,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("RI-350-19")
-        self.resize(820, 760)
+        # self.resize(820, 760)
 
         self.modbus = ModbusClientWrapper()
         self.thread_pool = QtCore.QThreadPool.globalInstance()
@@ -144,6 +144,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self.text_log.setReadOnly(True)
         # Сделаем окно журнала крупнее по высоте
         self.text_log.setMinimumHeight(400)
+        self.text_log.setMinimumWidth(600)
         log_layout.addWidget(self.text_log)
 
         layout.addWidget(conn_box)
