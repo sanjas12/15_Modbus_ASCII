@@ -37,11 +37,11 @@ class ModbusClientWrapper:
     def _is_open(self) -> bool:
         if self._client is None:
             return False
-        attr = getattr(self._client, "is_open", None)
-        if callable(attr):
-            return bool(attr())
-        if isinstance(attr, bool):
-            return attr
+        is_open_attr = getattr(self._client, "is_open", None)
+        if callable(is_open_attr):
+            return bool(is_open_attr())
+        if isinstance(is_open_attr, bool):
+            return is_open_attr
         return False
 
     def configure(self, host: str, port: int, unit_id: int) -> None:
@@ -133,7 +133,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
 
         # UI controls created in __init__ to satisfy static analysis
         # Connection
-        self.edit_ip = QtWidgets.QLineEdit("192.168.0.10")
+        self.edit_ip = QtWidgets.QLineEdit("192.168.0.1")
         self.spin_port = QtWidgets.QSpinBox()
         self.spin_unit = QtWidgets.QSpinBox()
         self.btn_connect = QtWidgets.QPushButton("Подключиться")
@@ -161,6 +161,13 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self.btn_cmd_estop = QtWidgets.QPushButton("Аварийный останов")
         self.btn_cmd_reset = QtWidgets.QPushButton("Сброс ошибки")
         self.btn_cmd_jog_to_stop = QtWidgets.QPushButton("Толчок для останова")
+        # RI350 setpoints
+        self.spin_freq = QtWidgets.QDoubleSpinBox()
+        self.btn_set_freq = QtWidgets.QPushButton("Задать частоту")
+        self.btn_read_freq = QtWidgets.QPushButton("Прочитать частоту")
+        self.spin_pid_set = QtWidgets.QDoubleSpinBox()
+        self.btn_set_pid = QtWidgets.QPushButton("Задать ПИД, %")
+        self.btn_read_pid = QtWidgets.QPushButton("Прочитать ПИД, %")
 
         self._build_ui()
         self._wire_signals()
@@ -193,8 +200,8 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
 
         # Tabs for operations
         tabs = QtWidgets.QTabWidget()
-        tabs.addTab(self._build_read_tab(), "Чтение")
-        tabs.addTab(self._build_write_tab(), "Запись")
+        # tabs.addTab(self._build_read_tab(), "Чтение")
+        # tabs.addTab(self._build_write_tab(), "Запись")
         tabs.addTab(self._build_ri350_tab(), "RI350")
 
         # Log
@@ -271,6 +278,11 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self.btn_cmd_estop.clicked.connect(lambda: self.send_ri350_command(0x0006, "Аварийный останов"))
         self.btn_cmd_reset.clicked.connect(lambda: self.send_ri350_command(0x0007, "Сброс ошибки"))
         self.btn_cmd_jog_to_stop.clicked.connect(lambda: self.send_ri350_command(0x0008, "Толчок для останова"))
+        # RI350 setpoints
+        self.btn_set_freq.clicked.connect(self.on_set_frequency)
+        self.btn_read_freq.clicked.connect(self.on_read_frequency)
+        self.btn_set_pid.clicked.connect(self.on_set_pid)
+        self.btn_read_pid.clicked.connect(self.on_read_pid)
 
     def _build_ri350_tab(self) -> QtWidgets.QWidget:
         page = QtWidgets.QWidget()
@@ -287,6 +299,33 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.btn_cmd_reset, 4, 0)
         layout.addWidget(self.btn_cmd_jog_to_stop, 4, 1)
 
+        # Setpoints section
+        row = 6
+        freq_box = QtWidgets.QGroupBox("Задание частоты (регистр 0x2001, шаг 0.01 Гц)")
+        freq_layout = QtWidgets.QGridLayout(freq_box)
+        self.spin_freq.setDecimals(2)
+        self.spin_freq.setSingleStep(0.01)
+        self.spin_freq.setRange(0.00, 400.00)
+        self.spin_freq.setValue(50.00)
+        freq_layout.addWidget(QtWidgets.QLabel("Частота, Гц"), 0, 0)
+        freq_layout.addWidget(self.spin_freq, 0, 1)
+        freq_layout.addWidget(self.btn_set_freq, 0, 2)
+        freq_layout.addWidget(self.btn_read_freq, 0, 3)
+        layout.addWidget(freq_box, row, 0, 1, 2)
+
+        row += 1
+        pid_box = QtWidgets.QGroupBox("ПИД задание (регистр 0x2002, 1000 = 100.0%)")
+        pid_layout = QtWidgets.QGridLayout(pid_box)
+        self.spin_pid_set.setDecimals(1)
+        self.spin_pid_set.setSingleStep(0.1)
+        self.spin_pid_set.setRange(0.0, 100.0)
+        self.spin_pid_set.setValue(0.0)
+        pid_layout.addWidget(QtWidgets.QLabel("ПИД, %"), 0, 0)
+        pid_layout.addWidget(self.spin_pid_set, 0, 1)
+        pid_layout.addWidget(self.btn_set_pid, 0, 2)
+        pid_layout.addWidget(self.btn_read_pid, 0, 3)
+        layout.addWidget(pid_box, row, 0, 1, 2)
+
         return page
 
     def send_ri350_command(self, code: int, title: str) -> None:
@@ -294,6 +333,45 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         def after(ok: bool) -> None:
             self.log(f"RI350: {title} → регистр 0x{address:04X} значение 0x{code:04X} — {'OK' if ok else 'ОШИБКА'}")
         self._submit(self.modbus.write_single_register, after, address, int(code))
+
+    # --- RI350 setpoints handlers ---
+    def on_set_frequency(self) -> None:
+        hz = float(self.spin_freq.value())
+        reg_val = int(round(hz * 100))  # 0.01 Hz units
+        address = 0x2001
+        def after(ok: bool) -> None:
+            self.log(f"RI350: задать частоту {hz:.2f} Гц (0x{reg_val:04X}) → регистр 0x{address:04X} — {'OK' if ok else 'ОШИБКА'}")
+        self._submit(self.modbus.write_single_register, after, address, reg_val)
+
+    def on_read_frequency(self) -> None:
+        address = 0x2001
+        def after(data: Optional[List[int]]) -> None:
+            if not data:
+                self.log("RI350: чтение частоты — пусто")
+                return
+            hz = (data[0] or 0) / 100.0
+            self.spin_freq.setValue(hz)
+            self.log(f"RI350: текущая частота {hz:.2f} Гц из 0x{address:04X}")
+        self._submit(self.modbus.read_holding, after, address, 1)
+
+    def on_set_pid(self) -> None:
+        percent = float(self.spin_pid_set.value())
+        reg_val = int(round(percent * 10))  # 0.1% units; 100.0% -> 1000
+        address = 0x2002
+        def after(ok: bool) -> None:
+            self.log(f"RI350: задать ПИД {percent:.1f}% (0x{reg_val:04X}) → регистр 0x{address:04X} — {'OK' if ok else 'ОШИБКА'}")
+        self._submit(self.modbus.write_single_register, after, address, reg_val)
+
+    def on_read_pid(self) -> None:
+        address = 0x2002
+        def after(data: Optional[List[int]]) -> None:
+            if not data:
+                self.log("RI350: чтение ПИД — пусто")
+                return
+            percent = (data[0] or 0) / 10.0
+            self.spin_pid_set.setValue(percent)
+            self.log(f"RI350: текущий ПИД {percent:.1f}% из 0x{address:04X}")
+        self._submit(self.modbus.read_holding, after, address, 1)
 
     # --- Helpers ---
     def log(self, message: str) -> None:
