@@ -34,20 +34,13 @@ class ModbusClientWrapper:
         self._client: Optional[ModbusClient] = None
         self._lock = threading.Lock()
 
-    def _is_open(self) -> bool:
-        if self._client is None:
-            return False
-        is_open_attr = getattr(self._client, "is_open", None)
-        if callable(is_open_attr):
-            return bool(is_open_attr())
-        if isinstance(is_open_attr, bool):
-            return is_open_attr
-        return False
-
     def configure(self, host: str, port: int, unit_id: int) -> None:
         with self._lock:
-            if self._client is not None and self._is_open():
-                self._client.close()
+            if self._client is not None:
+                try:
+                    self._client.close()
+                except Exception:  # noqa: BLE001
+                    pass
             # Recreate client with explicit params to avoid API ambiguity
             self._client = ModbusClient(
                 host=host,
@@ -62,9 +55,7 @@ class ModbusClientWrapper:
         with self._lock:
             if self._client is None:
                 raise RuntimeError("Клиент не сконфигурирован")
-            if not self._is_open():
-                return self._client.open()
-            return True
+            return bool(self._client.open())
 
     def close(self) -> None:
         with self._lock:
@@ -161,6 +152,19 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self.btn_cmd_estop = QtWidgets.QPushButton("Аварийный останов")
         self.btn_cmd_reset = QtWidgets.QPushButton("Сброс ошибки")
         self.btn_cmd_jog_to_stop = QtWidgets.QPushButton("Толчок для останова")
+        # Telemetry controls
+        self.lbl_tel_state1 = QtWidgets.QLabel("—")
+        self.lbl_tel_state1_raw = QtWidgets.QLabel("—")
+        self.lbl_tel_ready = QtWidgets.QLabel("—")
+        self.lbl_tel_motor_sel = QtWidgets.QLabel("—")
+        self.lbl_tel_motor_type = QtWidgets.QLabel("—")
+        self.lbl_tel_overload = QtWidgets.QLabel("—")
+        self.lbl_tel_ctrl_src = QtWidgets.QLabel("—")
+        self.lbl_tel_mode = QtWidgets.QLabel("—")
+        self.lbl_tel_position = QtWidgets.QLabel("—")
+        self.lbl_tel_vector = QtWidgets.QLabel("—")
+        self.lbl_tel_state2_raw = QtWidgets.QLabel("—")
+        self.btn_refresh_tel = QtWidgets.QPushButton("Обновить")
         # RI350 setpoints
         self.spin_freq = QtWidgets.QDoubleSpinBox()
         self.btn_set_freq = QtWidgets.QPushButton("Задать частоту")
@@ -212,6 +216,8 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
 
         layout.addWidget(conn_box)
         layout.addWidget(tabs)
+        # Telemetry group below RI350 tab and before log
+        layout.addWidget(self._build_telemetry_group())
         layout.addWidget(log_box)
 
     def _build_read_tab(self) -> QtWidgets.QWidget:
@@ -278,6 +284,8 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self.btn_cmd_estop.clicked.connect(lambda: self.send_ri350_command(0x0006, "Аварийный останов"))
         self.btn_cmd_reset.clicked.connect(lambda: self.send_ri350_command(0x0007, "Сброс ошибки"))
         self.btn_cmd_jog_to_stop.clicked.connect(lambda: self.send_ri350_command(0x0008, "Толчок для останова"))
+        # Telemetry
+        self.btn_refresh_tel.clicked.connect(self.on_refresh_telemetry)
         # RI350 setpoints
         self.btn_set_freq.clicked.connect(self.on_set_frequency)
         self.btn_read_freq.clicked.connect(self.on_read_frequency)
@@ -333,6 +341,121 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         def after(ok: bool) -> None:
             self.log(f"RI350: {title} → регистр 0x{address:04X} значение 0x{code:04X} — {'OK' if ok else 'ОШИБКА'}")
         self._submit(self.modbus.write_single_register, after, address, int(code))
+
+    # --- Telemetry (address_R) ---
+    def _build_telemetry_group(self) -> QtWidgets.QGroupBox:
+        page = QtWidgets.QGroupBox("Телеметрия")
+        layout = QtWidgets.QGridLayout(page)
+
+        r = 0
+        layout.addWidget(QtWidgets.QLabel("ПЧ слово состояния 1 (0x2100)"), r, 0, 1, 2); r += 1
+        layout.addWidget(QtWidgets.QLabel("Состояние"), r, 0)
+        layout.addWidget(self.lbl_tel_state1, r, 1); r += 1
+        layout.addWidget(QtWidgets.QLabel("RAW"), r, 0)
+        layout.addWidget(self.lbl_tel_state1_raw, r, 1); r += 1
+
+        layout.addWidget(QtWidgets.QLabel("ПЧ слово состояния 2 (0x2101)"), r, 0, 1, 2); r += 1
+        layout.addWidget(QtWidgets.QLabel("Готов к запуску"), r, 0)
+        layout.addWidget(self.lbl_tel_ready, r, 1); r += 1
+        layout.addWidget(QtWidgets.QLabel("Выбран двигатель"), r, 0)
+        layout.addWidget(self.lbl_tel_motor_sel, r, 1); r += 1
+        layout.addWidget(QtWidgets.QLabel("Тип двигателя"), r, 0)
+        layout.addWidget(self.lbl_tel_motor_type, r, 1); r += 1
+        layout.addWidget(QtWidgets.QLabel("Авария перегрузки"), r, 0)
+        layout.addWidget(self.lbl_tel_overload, r, 1); r += 1
+        layout.addWidget(QtWidgets.QLabel("Источник управления"), r, 0)
+        layout.addWidget(self.lbl_tel_ctrl_src, r, 1); r += 1
+        layout.addWidget(QtWidgets.QLabel("Режим управления"), r, 0)
+        layout.addWidget(self.lbl_tel_mode, r, 1); r += 1
+        layout.addWidget(QtWidgets.QLabel("Позиционное управление"), r, 0)
+        layout.addWidget(self.lbl_tel_position, r, 1); r += 1
+        layout.addWidget(QtWidgets.QLabel("Тип вектора"), r, 0)
+        layout.addWidget(self.lbl_tel_vector, r, 1); r += 1
+        layout.addWidget(QtWidgets.QLabel("RAW"), r, 0)
+        layout.addWidget(self.lbl_tel_state2_raw, r, 1); r += 1
+
+        layout.addWidget(self.btn_refresh_tel, r, 0, 1, 2)
+
+        return page
+
+    @staticmethod
+    def _decode_state1(value: int) -> str:
+        mapping = {
+            0x0001: "Вперед",
+            0x0002: "Назад",
+            0x0003: "Останов",
+            0x0004: "Ошибка",
+            0x0005: "POFF",
+            0x0006: "Предварительное возбуждение",
+        }
+        return mapping.get(value, f"Неизвестно (0x{value:04X})")
+
+    @staticmethod
+    def _decode_state2_fields(value: int) -> dict:
+        ready = bool(value & (1 << 0))
+        motor_sel_bits = (value >> 1) & 0b11
+        motor_sel = "Двигатель 1" if motor_sel_bits == 0 else ("Двигатель 2" if motor_sel_bits == 1 else f"Код {motor_sel_bits}")
+        motor_type = "Синхронный" if (value & (1 << 3)) else "Асинхронный"
+        overload = bool(value & (1 << 4))
+        ctrl_src_bits = (value >> 5) & 0b11
+        ctrl_src = {0: "Клавиатура", 1: "Терминал", 2: "Связь"}.get(ctrl_src_bits, f"Код {ctrl_src_bits}")
+        mode = "Крутящий момент" if (value & (1 << 8)) else "Скорость"
+        position = bool(value & (1 << 9))
+        vector_bits = (value >> 10) & 0b11
+        vector_map = {0: "Вектор 0", 1: "Вектор 1", 2: "Вектор замкн. контура", 3: "Вектор напр. пространства"}
+        vector = vector_map.get(vector_bits, f"Код {vector_bits}")
+        return {
+            "ready": ready,
+            "motor_sel": motor_sel,
+            "motor_type": motor_type,
+            "overload": overload,
+            "ctrl_src": ctrl_src,
+            "mode": mode,
+            "position": position,
+            "vector": vector,
+        }
+
+    def on_refresh_telemetry(self) -> None:
+        # Read 0x2100 and 0x2101 sequentially and update labels
+        def after_first(data1: Optional[List[int]]):
+            val1 = data1[0] if data1 and len(data1) > 0 else None
+            if val1 is not None:
+                self.lbl_tel_state1.setText(self._decode_state1(int(val1)))
+                self.lbl_tel_state1_raw.setText(f"0x{int(val1):04X}")
+            else:
+                self.lbl_tel_state1.setText("—")
+                self.lbl_tel_state1_raw.setText("—")
+
+            def after_second(data2: Optional[List[int]]):
+                val2 = data2[0] if data2 and len(data2) > 0 else None
+                if val2 is not None:
+                    fields = self._decode_state2_fields(int(val2))
+                    self.lbl_tel_ready.setText("Готов" if fields["ready"] else "Не готов")
+                    self.lbl_tel_motor_sel.setText(fields["motor_sel"])
+                    self.lbl_tel_motor_type.setText(fields["motor_type"])
+                    self.lbl_tel_overload.setText("Есть" if fields["overload"] else "Нет")
+                    self.lbl_tel_ctrl_src.setText(fields["ctrl_src"])
+                    self.lbl_tel_mode.setText(fields["mode"])
+                    self.lbl_tel_position.setText("Вкл" if fields["position"] else "Выкл")
+                    self.lbl_tel_vector.setText(fields["vector"])
+                    self.lbl_tel_state2_raw.setText(f"0x{int(val2):04X}")
+                else:
+                    for w in (
+                        self.lbl_tel_ready,
+                        self.lbl_tel_motor_sel,
+                        self.lbl_tel_motor_type,
+                        self.lbl_tel_overload,
+                        self.lbl_tel_ctrl_src,
+                        self.lbl_tel_mode,
+                        self.lbl_tel_position,
+                        self.lbl_tel_vector,
+                        self.lbl_tel_state2_raw,
+                    ):
+                        w.setText("—")
+
+            self._submit(self.modbus.read_holding, after_second, 0x2101, 1)
+
+        self._submit(self.modbus.read_holding, after_first, 0x2100, 1)
 
     # --- RI350 setpoints handlers ---
     def on_set_frequency(self) -> None:
