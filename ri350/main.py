@@ -485,7 +485,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
 
         def after_connect(ok: bool) -> None:
             self._set_status(bool(ok))
-            self.log(f"Подключение к {host}:{port} — {'OK' if ok else 'Нет подключания'}")
+            self.log(f"Подключение к {host}:{port} — {'OK' if ok else 'Не удалось подключиться'}")
             if ok:
                 # Автоматически включаем автообновление и делаем мгновенное обновление
                 self.chk_tel_auto.setChecked(True)
