@@ -14,11 +14,14 @@ class ModbusClientWrapper:
         self._lock = threading.Lock()
 
     def configure(self, host: str, port: int, unit_id: int) -> None:
+        if not host or not isinstance(port, int) or port <= 0 or port > 65535:
+            raise ValueError("Неверные параметры подключения")
+            
         with self._lock:
             if self._client is not None:
                 try:
                     self._client.close()
-                except Exception:  # noqa: BLE001
+                except Exception:
                     pass
             self._client = ModbusClient(
                 host=host,

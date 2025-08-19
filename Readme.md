@@ -20,3 +20,14 @@ https://crccalc.com/ - расчет crc  CRC-16/MODBUS
 
 <!-- стандартный запрос modbus tcp (02 04 0000 0001 31F9) -->
 https://ipc2u.com/articles/knowledge-base/detailed-description-of-the-modbus-tcp-protocol-with-command-examples/
+
+
+**********************************************************************************
+ri350 - обмен по Modbus TCP с ПЧ RI350
+    Если устройство одно и логика простая → Threading.
+    Если устройств много или высокая нагрузка → Asyncio.
+    Если команды должны обрабатываться строго по очереди → Queue + Threads.
+    Для промышленных решений также можно рассмотреть OPC UA или MQTT + база данных.
+
+настройки ПЧ для работы по Modbus\Tcp
+    P00.01=2, P00.02=0, P00.06=8, P14.00=1
