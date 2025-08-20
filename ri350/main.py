@@ -5,6 +5,7 @@ from PyQt5 import QtCore, QtWidgets
 
 from modbus_client import ModbusClientWrapper
 from telemetry import decode_SW1, decode_SW2
+from signals import Signals
 
 
 class WorkerSignals(QtCore.QObject):
@@ -41,6 +42,8 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
     REG_STATE1 = 0x2100
     REG_STATE2 = 0x2101
     REG_FREQ_READ = 0x3000
+
+    DEVICE = "RI350"
 
     def __init__(self) -> None:
         super().__init__()
@@ -310,12 +313,17 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         )
 
         # RI350 setpoints
-        self.btn_set_freq.clicked.connect(self.on_set_frequency)
+        self.btn_set_freq.clicked.connect(
+            lambda: self.set_register_value(self.spin_freq, 0x2001, 100, "частоту (Гц)")
+        )
         self.btn_read_freq.clicked.connect(self.on_read_frequency)
         self.btn_set_pid.clicked.connect(self.on_set_pid)
-        self.btn_read_pid.clicked.connect(self.on_read_pid)
+        # self.btn_read_pid.clicked.connect(self.on_read_pid)
 
     def _build_ri350_tab(self) -> QtWidgets.QWidget:
+        
+        signals = Signals()
+        
         page = QtWidgets.QWidget()
         layout = QtWidgets.QGridLayout(page)
 
@@ -355,64 +363,33 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         pid_layout.addWidget(QtWidgets.QLabel("ПИД, %"), 0, 0)
         pid_layout.addWidget(self.spin_pid_set, 0, 1)
         pid_layout.addWidget(self.btn_set_pid, 0, 2)
-        pid_layout.addWidget(self.btn_read_pid, 0, 3)
+        # pid_layout.addWidget(self.btn_read_pid, 0, 3)
         layout.addWidget(pid_box, row, 0, 1, 2)
         row += 1
         
         com_setting_box = QtWidgets.QGroupBox("Communication RW settings ")
         com_setting_layout = QtWidgets.QGridLayout(com_setting_box)
-        # PID Feedback
-        com_setting_layout.addWidget(QtWidgets.QLabel("Обратная связь ПИД"), 0, 0)
-        com_setting_layout.addWidget(self.spin_pid_feedback, 0, 1)
-        com_setting_layout.addWidget(self.btn_set_pid_feedback, 0, 2)
-        # Torque
-        com_setting_layout.addWidget(QtWidgets.QLabel("Задание момента"), 1, 0)
-        com_setting_layout.addWidget(self.spin_torque, 1, 1)
-        com_setting_layout.addWidget(self.btn_set_torque, 1, 2)
-        # Forward freq limit
-        com_setting_layout.addWidget(QtWidgets.QLabel("Задание верхнего предела частоты прямого вращения"), 2, 0)
-        com_setting_layout.addWidget(self.spin_forward_freq_limit, 2, 1)
-        com_setting_layout.addWidget(self.btn_set_forward_freq_limit, 2, 2)
-        # Reverse freq limit
-        com_setting_layout.addWidget(QtWidgets.QLabel("Задание верхнего предела частоты обратного вращения"), 3, 0)
-        com_setting_layout.addWidget(self.spin_reverse_freq_limit, 3, 1)
-        com_setting_layout.addWidget(self.btn_set_reverse_freq_limit, 3, 2)
-        # Torque limit
-        com_setting_layout.addWidget(QtWidgets.QLabel("Верхний предел крутящего момента"), 4, 0)
-        com_setting_layout.addWidget(self.spin_torque_limit, 4, 1)
-        com_setting_layout.addWidget(self.btn_set_torque_limit, 4, 2)
-        # Brake torque limit
-        com_setting_layout.addWidget(QtWidgets.QLabel("Верхний предел тормозного момента"), 5, 0)
-        com_setting_layout.addWidget(self.spin_brake_torque_limit, 5, 1)
-        com_setting_layout.addWidget(self.btn_set_brake_torque_limit, 5, 2)
-        # Control word
-        com_setting_layout.addWidget(QtWidgets.QLabel("Специальное управляющее командное слово"), 6, 0)
-        com_setting_layout.addWidget(self.spin_control_word, 6, 1)
-        com_setting_layout.addWidget(self.btn_set_control_word, 6, 2)
-        # Virtual inputs
-        com_setting_layout.addWidget(QtWidgets.QLabel("Команда виртуальных входных клемм, диапазон"), 7, 0)
-        com_setting_layout.addWidget(self.spin_virtual_inputs, 7, 1)
-        com_setting_layout.addWidget(self.btn_set_virtual_inputs, 7, 2)
-        # Virtual outputs
-        com_setting_layout.addWidget(QtWidgets.QLabel("Команда виртуальных выходных клемм, диапазон"), 8, 0)
-        com_setting_layout.addWidget(self.spin_virtual_outputs, 8, 1)
-        com_setting_layout.addWidget(self.btn_set_virtual_outputs, 8, 2)
-        # Virtual inputs range
-        com_setting_layout.addWidget(QtWidgets.QLabel("Команда виртуальных входных клемм, диапазон"), 9, 0)
-        com_setting_layout.addWidget(self.spin_virtual_inputs_range, 9, 1)
-        com_setting_layout.addWidget(self.btn_set_virtual_inputs_range, 9, 2)
-        # Voltage
-        com_setting_layout.addWidget(QtWidgets.QLabel("Задание напряжения (используется для разделения U/F"), 10, 0)
-        com_setting_layout.addWidget(self.spin_voltage, 10, 1)
-        com_setting_layout.addWidget(self.btn_set_voltage, 10, 2)
-        # AO1
-        com_setting_layout.addWidget(QtWidgets.QLabel("Задание выхода АО1"), 11, 0)
-        com_setting_layout.addWidget(self.spin_ao1, 11, 1)
-        com_setting_layout.addWidget(self.btn_set_ao1, 11, 2)
-        # AO2
-        com_setting_layout.addWidget(QtWidgets.QLabel("Задание выхода АО2"), 12, 0)
-        com_setting_layout.addWidget(self.spin_ao2, 12, 1)
-        com_setting_layout.addWidget(self.btn_set_ao2, 12, 2)
+        
+        # Список параметров: (label, spinbox, button)
+        param_widgets = [
+            ("Обратная связь ПИД", self.spin_pid_feedback, self.btn_set_pid_feedback),
+            ("Задание момента", self.spin_torque, self.btn_set_torque),
+            ("Задание верхнего предела частоты прямого вращения", self.spin_forward_freq_limit, self.btn_set_forward_freq_limit),
+            ("Задание верхнего предела частоты обратного вращения", self.spin_reverse_freq_limit, self.btn_set_reverse_freq_limit),
+            ("Верхний предел крутящего момента", self.spin_torque_limit, self.btn_set_torque_limit),
+            ("Верхний предел тормозного момента", self.spin_brake_torque_limit, self.btn_set_brake_torque_limit),
+            ("Специальное управляющее командное слово", self.spin_control_word, self.btn_set_control_word),
+            ("Команда виртуальных входных клемм, диапазон", self.spin_virtual_inputs, self.btn_set_virtual_inputs),
+            ("Команда виртуальных выходных клемм, диапазон", self.spin_virtual_outputs, self.btn_set_virtual_outputs),
+            ("Команда виртуальных входных клемм, диапазон", self.spin_virtual_inputs_range, self.btn_set_virtual_inputs_range),
+            ("Задание напряжения (используется для разделения U/F", self.spin_voltage, self.btn_set_voltage),
+            ("Задание выхода АО1", self.spin_ao1, self.btn_set_ao1),
+            ("Задание выхода АО2", self.spin_ao2, self.btn_set_ao2),
+        ]
+        for row, (label, spinbox, button) in enumerate(param_widgets):
+            com_setting_layout.addWidget(QtWidgets.QLabel(label), row, 0)
+            com_setting_layout.addWidget(spinbox, row, 1)
+            com_setting_layout.addWidget(button, row, 2)
 
         layout.addWidget(com_setting_box, row, 0, 1, 2)
 
@@ -586,19 +563,18 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self._submit(self.modbus.read_holding, read_cw1, 0x2100, 1)
 
     # --- RI350 setpoints handlers ---
-    def on_set_frequency(self) -> None:
-        hz = float(self.spin_freq.value())
-        print(hz)
-        reg_val = int(round(hz * 100))  # 0.01 Hz units
-        address = 0x2001
-
+    def set_register_value(self, spinbox: QtWidgets.QDoubleSpinBox, address: int, scale: float, title: str) -> None:
+        value = float(spinbox.value())
+        reg_val = int(round(value * scale))
         def after(ok: bool) -> None:
             self.log(
-                f"RI350: задать частоту {hz:.2f} Гц (0x{reg_val:04X}) → регистр 0x{address:04X} — "
+                f"{self.DEVICE}: задать {title} {value:.2f} (0x{reg_val:04X}) → регистр 0x{address:04X} — "
                 f"{'OK' if ok else 'ОШИБКА'}"
             )
-
         self._submit(self.modbus.write_single_register, after, address, reg_val)
+
+    def on_set_frequency(self) -> None:
+        self.set_register_value(self.spin_freq, 0x2001, 100, "частоту (Гц)")
 
     def on_read_frequency(self) -> None:  # <-- Исправлено имя метода
         address = 0x3000

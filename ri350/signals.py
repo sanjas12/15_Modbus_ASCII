@@ -22,15 +22,15 @@ class Signals:
     def _init_predefined_parameters(self):
         """Initialize all predefined parameter configurations."""
         predefined_params = {
-            "Задать частоту": ParameterConfig(
+            "Задание частоты": ParameterConfig(
                 modbus_address=2001,
                 default_value=50.0,
-                button_name="btn_set_frequency"
+                button_name="Задать частоту"
             ),
-            "Задать ПИД, %": ParameterConfig(
+            "ПИД задание, %": ParameterConfig(
                 modbus_address=2002,
                 default_value=75.0,
-                button_name="btn_set_pid_percent"
+                button_name="Задать ПИД"
             ),
             "Задать ПИД обратную связь": ParameterConfig(
                 modbus_address=2003,
@@ -158,7 +158,11 @@ class Signals:
         return f"Settings(parameters={len(self.parameters)} parameters)"
 
 # Example usage:
-# Signals = Signals()
+signals = Signals()
+
+for name, config in signals.parameters.items():
+    print(f"{name}: {config}")
+
 # print(Signals.get_modbus_address("Задать частоту"))  # Output: 2001
 # print(Signals.get_default_value("Задать ПИД, %"))    # Output: 75.0
 # print(Signals.get_button_name("Задать момент"))      # Output: btn_set_torque
