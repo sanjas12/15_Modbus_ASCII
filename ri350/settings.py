@@ -9,7 +9,7 @@ class ParameterConfig:
     button_name: str
 
 @dataclass
-class Settings:
+class Signals:
     """Data class for storing parameters configuration with Modbus addresses, default values, and button names."""
     
     # Main dictionary: parameter name -> ParameterConfig
@@ -158,7 +158,7 @@ class Settings:
         return f"Settings(parameters={len(self.parameters)} parameters)"
 
 # Example usage:
-# settings = Settings()
-# print(settings.get_modbus_address("Задать частоту"))  # Output: 2001
-# print(settings.get_default_value("Задать ПИД, %"))    # Output: 75.0
-# print(settings.get_button_name("Задать момент"))      # Output: btn_set_torque
+# Signals = Signals()
+# print(Signals.get_modbus_address("Задать частоту"))  # Output: 2001
+# print(Signals.get_default_value("Задать ПИД, %"))    # Output: 75.0
+# print(Signals.get_button_name("Задать момент"))      # Output: btn_set_torque
