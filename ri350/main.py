@@ -4,7 +4,7 @@ from typing import List, Optional
 from PyQt5 import QtCore, QtWidgets
 
 from modbus_client import ModbusClientWrapper
-from telemetry import decode_cw1, decode_cw2
+from telemetry import decode_SW1, decode_SW2
 
 
 class WorkerSignals(QtCore.QObject):
@@ -115,13 +115,41 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self._connected: bool = False
         self._tel_busy: bool = False
 
-        # RI350 setpoints
+        # Communication RW settings 
         self.spin_freq = QtWidgets.QDoubleSpinBox()
         self.btn_set_freq = QtWidgets.QPushButton("Задать частоту")
         self.btn_read_freq = QtWidgets.QPushButton("Прочитать частоту")
         self.spin_pid_set = QtWidgets.QDoubleSpinBox()
         self.btn_set_pid = QtWidgets.QPushButton("Задать ПИД, %")
         self.btn_read_pid = QtWidgets.QPushButton("Прочитать ПИД, %")
+
+        self.spin_pid_feedback = QtWidgets.QDoubleSpinBox()
+        self.btn_set_pid_feedback = QtWidgets.QPushButton("Задать ПИД обратную связь")
+        self.spin_torque = QtWidgets.QDoubleSpinBox()
+        self.btn_set_torque = QtWidgets.QPushButton("Задать момент")
+        self.spin_forward_freq_limit = QtWidgets.QDoubleSpinBox()
+        self.btn_set_forward_freq_limit = QtWidgets.QPushButton("Задать предел прямой частоты")
+        self.spin_reverse_freq_limit = QtWidgets.QDoubleSpinBox()
+        self.btn_set_reverse_freq_limit = QtWidgets.QPushButton("Задать предел обратной частоты")
+        self.spin_torque_limit = QtWidgets.QDoubleSpinBox()
+        self.btn_set_torque_limit = QtWidgets.QPushButton("Задать предел момента")
+        self.spin_brake_torque_limit = QtWidgets.QDoubleSpinBox()
+        self.btn_set_brake_torque_limit = QtWidgets.QPushButton("Задать предел тормозного момента")
+        self.spin_control_word = QtWidgets.QSpinBox()
+        self.btn_set_control_word = QtWidgets.QPushButton("Задать управляющее слово")
+        self.spin_virtual_inputs = QtWidgets.QSpinBox()
+        self.btn_set_virtual_inputs = QtWidgets.QPushButton("Задать виртуальные входы")
+        self.spin_virtual_outputs = QtWidgets.QSpinBox()
+        self.btn_set_virtual_outputs = QtWidgets.QPushButton("Задать виртуальные выходы")
+        self.spin_virtual_inputs_range = QtWidgets.QSpinBox()
+        self.btn_set_virtual_inputs_range = QtWidgets.QPushButton("Задать диапазон входов")
+        self.spin_voltage = QtWidgets.QDoubleSpinBox()
+        self.btn_set_voltage = QtWidgets.QPushButton("Задать напряжение")
+        self.spin_ao1 = QtWidgets.QDoubleSpinBox()
+        self.btn_set_ao1 = QtWidgets.QPushButton("Задать АО1")
+        self.spin_ao2 = QtWidgets.QDoubleSpinBox()
+        self.btn_set_ao2 = QtWidgets.QPushButton("Задать АО2")
+
 
         self._build_ui()
         self._wire_signals()
@@ -135,6 +163,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         central.setLayout(layout_main)
 
         layout_left = QtWidgets.QVBoxLayout()
+        layout_middle = QtWidgets.QVBoxLayout()
         layout_right = QtWidgets.QVBoxLayout()
 
         # --- Connection box ---
@@ -175,11 +204,13 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
 
         layout_left.addWidget(conn_box)
         layout_left.addWidget(tabs)
-        layout_left.addWidget(self._build_telemetry_group())
+        
+        layout_middle.addWidget(self._build_telemetry_group())
 
         layout_right.addWidget(log_box)
 
         layout_main.addLayout(layout_left)
+        layout_main.addLayout(layout_middle)
         layout_main.addLayout(layout_right)
 
     def _build_read_tab(self) -> QtWidgets.QWidget:
@@ -326,6 +357,64 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         pid_layout.addWidget(self.btn_set_pid, 0, 2)
         pid_layout.addWidget(self.btn_read_pid, 0, 3)
         layout.addWidget(pid_box, row, 0, 1, 2)
+        row += 1
+        
+        com_setting_box = QtWidgets.QGroupBox("Communication RW settings ")
+        com_setting_layout = QtWidgets.QGridLayout(com_setting_box)
+        # PID Feedback
+        com_setting_layout.addWidget(QtWidgets.QLabel("Обратная связь ПИД"), 0, 0)
+        com_setting_layout.addWidget(self.spin_pid_feedback, 0, 1)
+        com_setting_layout.addWidget(self.btn_set_pid_feedback, 0, 2)
+        # Torque
+        com_setting_layout.addWidget(QtWidgets.QLabel("Задание момента"), 1, 0)
+        com_setting_layout.addWidget(self.spin_torque, 1, 1)
+        com_setting_layout.addWidget(self.btn_set_torque, 1, 2)
+        # Forward freq limit
+        com_setting_layout.addWidget(QtWidgets.QLabel("Задание верхнего предела частоты прямого вращения"), 2, 0)
+        com_setting_layout.addWidget(self.spin_forward_freq_limit, 2, 1)
+        com_setting_layout.addWidget(self.btn_set_forward_freq_limit, 2, 2)
+        # Reverse freq limit
+        com_setting_layout.addWidget(QtWidgets.QLabel("Задание верхнего предела частоты обратного вращения"), 3, 0)
+        com_setting_layout.addWidget(self.spin_reverse_freq_limit, 3, 1)
+        com_setting_layout.addWidget(self.btn_set_reverse_freq_limit, 3, 2)
+        # Torque limit
+        com_setting_layout.addWidget(QtWidgets.QLabel("Верхний предел крутящего момента"), 4, 0)
+        com_setting_layout.addWidget(self.spin_torque_limit, 4, 1)
+        com_setting_layout.addWidget(self.btn_set_torque_limit, 4, 2)
+        # Brake torque limit
+        com_setting_layout.addWidget(QtWidgets.QLabel("Верхний предел тормозного момента"), 5, 0)
+        com_setting_layout.addWidget(self.spin_brake_torque_limit, 5, 1)
+        com_setting_layout.addWidget(self.btn_set_brake_torque_limit, 5, 2)
+        # Control word
+        com_setting_layout.addWidget(QtWidgets.QLabel("Специальное управляющее командное слово"), 6, 0)
+        com_setting_layout.addWidget(self.spin_control_word, 6, 1)
+        com_setting_layout.addWidget(self.btn_set_control_word, 6, 2)
+        # Virtual inputs
+        com_setting_layout.addWidget(QtWidgets.QLabel("Команда виртуальных входных клемм, диапазон"), 7, 0)
+        com_setting_layout.addWidget(self.spin_virtual_inputs, 7, 1)
+        com_setting_layout.addWidget(self.btn_set_virtual_inputs, 7, 2)
+        # Virtual outputs
+        com_setting_layout.addWidget(QtWidgets.QLabel("Команда виртуальных выходных клемм, диапазон"), 8, 0)
+        com_setting_layout.addWidget(self.spin_virtual_outputs, 8, 1)
+        com_setting_layout.addWidget(self.btn_set_virtual_outputs, 8, 2)
+        # Virtual inputs range
+        com_setting_layout.addWidget(QtWidgets.QLabel("Команда виртуальных входных клемм, диапазон"), 9, 0)
+        com_setting_layout.addWidget(self.spin_virtual_inputs_range, 9, 1)
+        com_setting_layout.addWidget(self.btn_set_virtual_inputs_range, 9, 2)
+        # Voltage
+        com_setting_layout.addWidget(QtWidgets.QLabel("Задание напряжения (используется для разделения U/F"), 10, 0)
+        com_setting_layout.addWidget(self.spin_voltage, 10, 1)
+        com_setting_layout.addWidget(self.btn_set_voltage, 10, 2)
+        # AO1
+        com_setting_layout.addWidget(QtWidgets.QLabel("Задание выхода АО1"), 11, 0)
+        com_setting_layout.addWidget(self.spin_ao1, 11, 1)
+        com_setting_layout.addWidget(self.btn_set_ao1, 11, 2)
+        # AO2
+        com_setting_layout.addWidget(QtWidgets.QLabel("Задание выхода АО2"), 12, 0)
+        com_setting_layout.addWidget(self.spin_ao2, 12, 1)
+        com_setting_layout.addWidget(self.btn_set_ao2, 12, 2)
+
+        layout.addWidget(com_setting_box, row, 0, 1, 2)
 
         return page
 
@@ -408,12 +497,12 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
             return
         self._tel_busy = True
 
-        # Читаем 0x2100 → 0x2101 → 0x3000(6 байт) по цепочке
+        # Читаем 0x2100 (SW1) → 0x2101(SW2) → 0x3000(6 байт) -> all_RW  по цепочке
         def finish():
             # Сбрасываем флаг в конце любой ветки
             self._tel_busy = False
 
-        def after_cws(data: Optional[List[int]]) -> None:
+        def after_SWs(data: Optional[List[int]]) -> None:
             """разбираем массив данных из ПЧ"""
             try:
                 if data and len(data) >= 3:
@@ -431,11 +520,30 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
             finally:
                 finish()
 
+        def all_RW(data: Optional[List[int]]) -> None:
+            """разбираем массив данных из ПЧ"""
+            try:
+                if data and len(data) >= 3:
+                    hz = (data[0] or 0) / 100.0
+                    # hz0 = (data[0] or 0) / 100.0 if data[0] is not None else None
+                    aim_hz = (data[1] or 0) / 100.0 if data[1] is not None else None
+                    velocity = (data[5] or 0) if data[5] is not None else None
+                    self.lbl_tel_cur_freq.setText(f"{hz:.2f}")
+                    self.lbl_tel_aim_freq.setText(f"{aim_hz:.2f}")
+                    self.lbl_tel_velocity.setText(f"{velocity:.2f}")
+                else:
+                    self.lbl_tel_cur_freq.setText("—")
+                    self.lbl_tel_aim_freq.setText("—")
+                    self.lbl_tel_velocity.setText("—")
+            finally:
+                finish()
+        
+
         def read_cw2(data2: Optional[List[int]]) -> None:
             try:
                 val2 = data2[0] if data2 and len(data2) > 0 else None
                 if val2 is not None:
-                    cw2 = decode_cw2(int(val2))
+                    cw2 = decode_SW2(int(val2))
                     self.lbl_tel_ready.setText("Готов" if cw2["ready"] else "Не готов")
                     self.lbl_tel_motor_sel.setText(cw2["motor_sel"])
                     self.lbl_tel_motor_type.setText(cw2["motor_type"])
@@ -460,12 +568,13 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
                         w.setText("—")
             finally:
                 # Третье чтение — частота
-                self._submit(self.modbus.read_holding, after_cws, 0x3000, 6)
+                self._submit(self.modbus.read_holding, after_SWs, 0x3000, 6)
+
 
         def read_cw1(data1: Optional[List[int]]) -> None:
             val1 = data1[0] if data1 and len(data1) > 0 else None
             if val1 is not None:
-                self.lbl_tel_state1.setText(decode_cw1(int(val1)))
+                self.lbl_tel_state1.setText(decode_SW1(int(val1)))
                 self.lbl_tel_state1_raw.setText(f"0x{int(val1):04X}")
             else:
                 self.lbl_tel_state1.setText("—")

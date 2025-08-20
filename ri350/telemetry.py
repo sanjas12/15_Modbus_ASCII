@@ -1,4 +1,4 @@
-def decode_cw1(value: int) -> str:
+def decode_SW1(value: int) -> str:
     """ПЧ слово состояния 1 address: 2100H"""
     mapping = {
         0x0001: "Вперед",
@@ -11,7 +11,7 @@ def decode_cw1(value: int) -> str:
     return mapping.get(value, f"Неизвестно (0x{value:04X})")
 
 
-def decode_cw2(value: int) -> dict:
+def decode_SW2(value: int) -> dict:
     """ПЧ слово состояния 2 address: 2101H"""
     motor_sel_map = {
         0: "Двигатель 1",
