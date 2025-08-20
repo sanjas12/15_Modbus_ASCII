@@ -326,7 +326,8 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         
         page = QtWidgets.QWidget()
         layout = QtWidgets.QGridLayout(page)
-
+        
+        # Команды управления
         layout.addWidget(
             QtWidgets.QLabel("Команды управления (регистр 0x2000)"), 0, 0, 1, 2
         )
@@ -339,7 +340,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.btn_cmd_reset, 4, 0)
         layout.addWidget(self.btn_cmd_jog_to_stop, 4, 1)
 
-        # Setpoints
+        # Communication RW settings
         row = 6
         freq_box = QtWidgets.QGroupBox("Задание частоты (регистр 0x2001, шаг 0.01 Гц)")
         freq_layout = QtWidgets.QGridLayout(freq_box)
@@ -351,7 +352,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         freq_layout.addWidget(self.spin_freq, 0, 1)
         freq_layout.addWidget(self.btn_set_freq, 0, 2)
         # freq_layout.addWidget(self.btn_read_freq, 0, 3)
-        layout.addWidget(freq_box, row, 0, 1, 2)
+        # layout.addWidget(freq_box, row, 0, 1, 2)
         row += 1
 
         pid_box = QtWidgets.QGroupBox("ПИД задание (регистр 0x2002, 1000 = 100.0%)")
@@ -364,7 +365,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         pid_layout.addWidget(self.spin_pid_set, 0, 1)
         pid_layout.addWidget(self.btn_set_pid, 0, 2)
         # pid_layout.addWidget(self.btn_read_pid, 0, 3)
-        layout.addWidget(pid_box, row, 0, 1, 2)
+        # layout.addWidget(pid_box, row, 0, 1, 2)
         row += 1
         
         com_setting_box = QtWidgets.QGroupBox("Communication RW settings ")
@@ -372,6 +373,8 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         
         # Список параметров: (label, spinbox, button)
         param_widgets = [
+            ("Задание частоты", self.spin_freq, self.btn_set_freq),
+            ("ПИД задание ", self.spin_pid_set, self.btn_set_pid),
             ("Обратная связь ПИД", self.spin_pid_feedback, self.btn_set_pid_feedback),
             ("Задание момента", self.spin_torque, self.btn_set_torque),
             ("Задание верхнего предела частоты прямого вращения", self.spin_forward_freq_limit, self.btn_set_forward_freq_limit),
