@@ -109,18 +109,18 @@ class Signals:
             "Задать виртуальные входы": ParameterConfig(
                 modbus_address="0x200A",
                 description="Задать виртуальные входы",
-                default_value=0,
-                button_name="btn_set_virtual_inputs",
-                range=(0, 100),
-                single_step=0.1
+                default_value=1,
+                button_name="Задать входы",
+                range=(1, 2),
+                single_step=1
             ),
             "Задать виртуальные выходы": ParameterConfig(
                 modbus_address="0x200B",
                 description="Задать виртуальные выходы",
                 default_value=0,
-                button_name="btn_set_virtual_outputs",
-                range=(0, 100),
-                single_step=0.1
+                button_name="Задать выходы",
+                range=(0, 2),
+                single_step=1
             ),
             "Задать напряжение": ParameterConfig(
                 modbus_address="0x200C",
