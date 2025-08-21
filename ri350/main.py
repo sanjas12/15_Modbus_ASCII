@@ -104,13 +104,41 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self.lbl_tel_cur_freq = QtWidgets.QLabel("—")
         self.lbl_tel_aim_freq = QtWidgets.QLabel("—")
         self.lbl_tel_velocity = QtWidgets.QLabel("—")
-
+        self.lbl_tel_volt_DC = QtWidgets.QLabel("—")
+        self.lbl_tel_out_volt = QtWidgets.QLabel("—")
+        self.lbl_tel_out_cur = QtWidgets.QLabel("—")
+        self.lbl_tel_velocit = QtWidgets.QLabel("—")
+        self.lbl_tel_out_pow = QtWidgets.QLabel("—")
+        self.lbl_tel_out_tor = QtWidgets.QLabel("—")
+        self.lbl_tel_out_clo = QtWidgets.QLabel("—")
+        self.lbl_tel_external_count_value = QtWidgets.QLabel("—")
+        self.lbl_tel_out_power = QtWidgets.QLabel("—")
+        self.lbl_tel_out_torq = QtWidgets.QLabel("—")
+        self.lbl_tel_out_close_loop = QtWidgets.QLabel("—")
+        self.lbl_tel_out_close_loop_feedback = QtWidgets.QLabel("—")
+        self.lbl_tel_input_state = QtWidgets.QLabel("—")
+        self.lbl_tel_output_state = QtWidgets.QLabel("—")
+        self.lbl_tel_analog_input_1 = QtWidgets.QLabel("—")
+        self.lbl_tel_analog_input_2 = QtWidgets.QLabel("—")
+        self.lbl_tel_analog_input_3 = QtWidgets.QLabel("—")
+        self.lbl_tel_analog_input_4 = QtWidgets.QLabel("—")
+        self.lbl_tel_read_input_of_HDIA = QtWidgets.QLabel("—")
+        self.lbl_tel_read_input_of_HDIB = QtWidgets.QLabel("—")
+        self.lbl_tel_read_current_step = QtWidgets.QLabel("—")
+        self.lbl_tel_external_length = QtWidgets.QLabel("—")
+        self.lbl_tel_external_count_value = QtWidgets.QLabel("—")
+        self.lbl_tel_torq_setting = QtWidgets.QLabel("—")
+        self.lbl_tel_id_code = QtWidgets.QLabel("—")
+        
+        
+        self.lbl_tel_fault_code = QtWidgets.QLabel("—")
+        
         self.btn_refresh_tel = QtWidgets.QPushButton("Обновить")
         self.chk_tel_auto = QtWidgets.QCheckBox("Автообновление")
         self.spin_tel_period = QtWidgets.QSpinBox()
         self.spin_tel_period.setRange(100, 10000)
         self.spin_tel_period.setSingleStep(100)
-        self.spin_tel_period.setValue(300)
+        self.spin_tel_period.setValue(100)
 
         # Auto-refresh runtime
         self.telemetry_timer = QtCore.QTimer(self)
@@ -119,40 +147,12 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self._tel_busy: bool = False
 
         # Communication RW settings 
-        self.spin_freq = QtWidgets.QDoubleSpinBox()
-        self.btn_set_freq = QtWidgets.QPushButton("Задать частоту")
-        self.btn_read_freq = QtWidgets.QPushButton("Прочитать частоту")
-        self.spin_pid_set = QtWidgets.QDoubleSpinBox()
-        self.btn_set_pid = QtWidgets.QPushButton("Задать ПИД, %")
-        self.btn_read_pid = QtWidgets.QPushButton("Прочитать ПИД, %")
-
-        self.spin_pid_feedback = QtWidgets.QDoubleSpinBox()
-        self.btn_set_pid_feedback = QtWidgets.QPushButton("Задать ПИД обратную связь")
-        self.spin_torque = QtWidgets.QDoubleSpinBox()
-        self.btn_set_torque = QtWidgets.QPushButton("Задать момент")
-        self.spin_forward_freq_limit = QtWidgets.QDoubleSpinBox()
-        self.btn_set_forward_freq_limit = QtWidgets.QPushButton("Задать предел прямой частоты")
-        self.spin_reverse_freq_limit = QtWidgets.QDoubleSpinBox()
-        self.btn_set_reverse_freq_limit = QtWidgets.QPushButton("Задать предел обратной частоты")
-        self.spin_torque_limit = QtWidgets.QDoubleSpinBox()
-        self.btn_set_torque_limit = QtWidgets.QPushButton("Задать предел момента")
-        self.spin_brake_torque_limit = QtWidgets.QDoubleSpinBox()
-        self.btn_set_brake_torque_limit = QtWidgets.QPushButton("Задать предел тормозного момента")
-        self.spin_control_word = QtWidgets.QSpinBox()
-        self.btn_set_control_word = QtWidgets.QPushButton("Задать управляющее слово")
-        self.spin_virtual_inputs = QtWidgets.QSpinBox()
-        self.btn_set_virtual_inputs = QtWidgets.QPushButton("Задать виртуальные входы")
-        self.spin_virtual_outputs = QtWidgets.QSpinBox()
-        self.btn_set_virtual_outputs = QtWidgets.QPushButton("Задать виртуальные выходы")
-        self.spin_virtual_inputs_range = QtWidgets.QSpinBox()
-        self.btn_set_virtual_inputs_range = QtWidgets.QPushButton("Задать диапазон входов")
-        self.spin_voltage = QtWidgets.QDoubleSpinBox()
-        self.btn_set_voltage = QtWidgets.QPushButton("Задать напряжение")
-        self.spin_ao1 = QtWidgets.QDoubleSpinBox()
-        self.btn_set_ao1 = QtWidgets.QPushButton("Задать АО1")
-        self.spin_ao2 = QtWidgets.QDoubleSpinBox()
-        self.btn_set_ao2 = QtWidgets.QPushButton("Задать АО2")
-
+        # self.signals = Signals()
+# 
+        # for name, config in self.signals.parameters.items():
+        #     self.signals.parameters[name].spin_box = QtWidgets.QDoubleSpinBox()
+        #     self.signals.parameters[name].btn_set = QtWidgets.QPushButton(config.description)
+        #     # print(f"{config.description=}")
 
         self._build_ui()
         self._wire_signals()
@@ -313,17 +313,14 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         )
 
         # RI350 setpoints
-        self.btn_set_freq.clicked.connect(
-            lambda: self.set_register_value(self.spin_freq, 0x2001, 100, "частоту (Гц)")
-        )
-        self.btn_read_freq.clicked.connect(self.on_read_frequency)
-        self.btn_set_pid.clicked.connect(self.on_set_pid)
+        # self.btn_set_freq.clicked.connect(
+            # lambda: self.set_register_value(self.spin_freq, 0x2001, 100, "частоту (Гц)")
+        # )
+        # self.btn_read_freq.clicked.connect(self.on_read_frequency)
+        # self.btn_set_pid.clicked.connect(self.on_set_pid)
         # self.btn_read_pid.clicked.connect(self.on_read_pid)
 
     def _build_ri350_tab(self) -> QtWidgets.QWidget:
-        
-        signals = Signals()
-        
         page = QtWidgets.QWidget()
         layout = QtWidgets.QGridLayout(page)
         
@@ -341,59 +338,52 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.btn_cmd_jog_to_stop, 4, 1)
 
         # Communication RW settings
+        # signals = Signals()
+        
+        com_setting_box = QtWidgets.QGroupBox("Communication RW settings ")
+        com_setting_layout = QtWidgets.QGridLayout(com_setting_box)
+        
+        
         row = 6
         freq_box = QtWidgets.QGroupBox("Задание частоты (регистр 0x2001, шаг 0.01 Гц)")
         freq_layout = QtWidgets.QGridLayout(freq_box)
-        self.spin_freq.setDecimals(2)
-        self.spin_freq.setSingleStep(0.01)
-        self.spin_freq.setRange(0.00, 400.00)
-        self.spin_freq.setValue(50.00)
+        # self.spin_freq.setDecimals(2)
+        # self.spin_freq.setSingleStep(0.01)
+        # self.spin_freq.setRange(0.00, 400.00)
+        # self.spin_freq.setValue(50.00)
         freq_layout.addWidget(QtWidgets.QLabel("Частота, Гц"), 0, 0)
-        freq_layout.addWidget(self.spin_freq, 0, 1)
-        freq_layout.addWidget(self.btn_set_freq, 0, 2)
+        # freq_layout.addWidget(self.spin_freq, 0, 1)
+        # freq_layout.addWidget(self.btn_set_freq, 0, 2)
         # freq_layout.addWidget(self.btn_read_freq, 0, 3)
         # layout.addWidget(freq_box, row, 0, 1, 2)
         row += 1
 
         pid_box = QtWidgets.QGroupBox("ПИД задание (регистр 0x2002, 1000 = 100.0%)")
         pid_layout = QtWidgets.QGridLayout(pid_box)
-        self.spin_pid_set.setDecimals(1)
-        self.spin_pid_set.setSingleStep(0.1)
-        self.spin_pid_set.setRange(0.0, 100.0)
-        self.spin_pid_set.setValue(0.0)
+        # self.spin_pid_set.setDecimals(1)
+        # self.spin_pid_set.setSingleStep(0.1)
+        # self.spin_pid_set.setRange(0.0, 100.0)
+        # self.spin_pid_set.setValue(0.0)
         pid_layout.addWidget(QtWidgets.QLabel("ПИД, %"), 0, 0)
-        pid_layout.addWidget(self.spin_pid_set, 0, 1)
-        pid_layout.addWidget(self.btn_set_pid, 0, 2)
+        # pid_layout.addWidget(self.spin_pid_set, 0, 1)
+        # pid_layout.addWidget(self.btn_set_pid, 0, 2)
         # pid_layout.addWidget(self.btn_read_pid, 0, 3)
         # layout.addWidget(pid_box, row, 0, 1, 2)
         row += 1
-        
-        com_setting_box = QtWidgets.QGroupBox("Communication RW settings ")
-        com_setting_layout = QtWidgets.QGridLayout(com_setting_box)
-        
-        # Список параметров: (label, spinbox, button)
-        param_widgets = [
-            ("Задание частоты", self.spin_freq, self.btn_set_freq),
-            ("ПИД задание ", self.spin_pid_set, self.btn_set_pid),
-            ("Обратная связь ПИД", self.spin_pid_feedback, self.btn_set_pid_feedback),
-            ("Задание момента", self.spin_torque, self.btn_set_torque),
-            ("Задание верхнего предела частоты прямого вращения", self.spin_forward_freq_limit, self.btn_set_forward_freq_limit),
-            ("Задание верхнего предела частоты обратного вращения", self.spin_reverse_freq_limit, self.btn_set_reverse_freq_limit),
-            ("Верхний предел крутящего момента", self.spin_torque_limit, self.btn_set_torque_limit),
-            ("Верхний предел тормозного момента", self.spin_brake_torque_limit, self.btn_set_brake_torque_limit),
-            ("Специальное управляющее командное слово", self.spin_control_word, self.btn_set_control_word),
-            ("Команда виртуальных входных клемм, диапазон", self.spin_virtual_inputs, self.btn_set_virtual_inputs),
-            ("Команда виртуальных выходных клемм, диапазон", self.spin_virtual_outputs, self.btn_set_virtual_outputs),
-            ("Команда виртуальных входных клемм, диапазон", self.spin_virtual_inputs_range, self.btn_set_virtual_inputs_range),
-            ("Задание напряжения (используется для разделения U/F", self.spin_voltage, self.btn_set_voltage),
-            ("Задание выхода АО1", self.spin_ao1, self.btn_set_ao1),
-            ("Задание выхода АО2", self.spin_ao2, self.btn_set_ao2),
-        ]
-        for row, (label, spinbox, button) in enumerate(param_widgets):
-            com_setting_layout.addWidget(QtWidgets.QLabel(label), row, 0)
-            com_setting_layout.addWidget(spinbox, row, 1)
-            com_setting_layout.addWidget(button, row, 2)
 
+        self.signals = Signals()
+
+
+        for row, (name, parameter) in enumerate(self.signals.parameters.items()):
+            com_setting_layout.addWidget(QtWidgets.QLabel(name), row, 0)
+            com_setting_layout.addWidget(parameter.spin_box, row, 1)
+            parameter.spin_box.setValue(parameter.default_value)
+            parameter.spin_box.setSingleStep(parameter.single_step)
+        #             self.spin_tel_period.setRange(100, 10000)
+            com_setting_layout.addWidget(parameter.btn_set, row, 2)
+            parameter.btn_set.clicked.connect(lambda: self.set_register_value(parameter.spin_box, parameter.modbus_address, 1, name))
+             # self.btn_read_freq.clicked.connect(self.on_read_frequency)
+                        # lambda: self.set_register_value(self.spin_freq, 0x2001, 100, "частоту (Гц)"))
         layout.addWidget(com_setting_box, row, 0, 1, 2)
 
         return page
@@ -423,7 +413,6 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         layout.addWidget(QtWidgets.QLabel("RAW"), r, 0)
         layout.addWidget(self.lbl_tel_state1_raw, r, 1)
         r += 1
-
         layout.addWidget(QtWidgets.QLabel("ПЧ слово состояния 2 (0x2101)"), r, 0, 1, 2)
         r += 1
         layout.addWidget(QtWidgets.QLabel("Готов к запуску"), r, 0)
@@ -454,74 +443,204 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.lbl_tel_state2_raw, r, 1)
         r += 1
 
-        layout.addWidget(self.btn_refresh_tel, r, 0)
-        layout.addWidget(self.chk_tel_auto, r, 1)
-        layout.addWidget(QtWidgets.QLabel("Период, мс"), r, 2)
-        layout.addWidget(self.spin_tel_period, r, 3)
 
-        r=0
         # Параллельная колонка с текущей частотой (справа сверху)
+        r=0
         layout.addWidget(QtWidgets.QLabel("Рабочая частота, Гц"), r, 2)
         layout.addWidget(self.lbl_tel_cur_freq, r, 3)
         r+=1
         layout.addWidget(QtWidgets.QLabel("Заданная частота, Гц"), r, 2)
         layout.addWidget(self.lbl_tel_aim_freq, r, 3)
         r+=1
+        layout.addWidget(QtWidgets.QLabel("Напряжение DC-шины"), r, 2)
+        layout.addWidget(self.lbl_tel_volt_DC, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Выходное напряжение"), r, 2)
+        layout.addWidget(self.lbl_tel_out_volt, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Выходной ток"), r, 2)
+        layout.addWidget(self.lbl_tel_out_cur, r, 3)
+        r+=1
         layout.addWidget(QtWidgets.QLabel("Скорость вращения, об/мин"), r, 2)
         layout.addWidget(self.lbl_tel_velocity, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Выходная мощность"), r, 2)
+        layout.addWidget(self.lbl_tel_out_power, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Выходная момент"), r, 2)
+        layout.addWidget(self.lbl_tel_out_torq, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Настройка замкнутого контура"), r, 2)
+        layout.addWidget(self.lbl_tel_out_close_loop, r, 3)
+        r+=1
         
+        layout.addWidget(QtWidgets.QLabel("Обратная связь с замкнутым контуром"), r, 2)
+        layout.addWidget(self.lbl_tel_out_close_loop_feedback, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Состояние входов"), r, 2)
+        layout.addWidget(self.lbl_tel_input_state, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Состояние выходов"), r, 2)
+        layout.addWidget(self.lbl_tel_output_state, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Аналоговый вход 1"), r, 2)
+        layout.addWidget(self.lbl_tel_analog_input_1, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Аналоговый вход 2"), r, 2)
+        layout.addWidget(self.lbl_tel_analog_input_2, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Аналоговый вход 3"), r, 2)
+        layout.addWidget(self.lbl_tel_analog_input_3, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Аналоговый вход 4"), r, 2)
+        layout.addWidget(self.lbl_tel_analog_input_4, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Считывание сигнала высокоскоростного импульсного входа HDIA"), r, 2)
+        layout.addWidget(self.lbl_tel_read_input_of_HDIA, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Считывание сигнала высокоскоростного импульсного входа HDIB"), r, 2)
+        layout.addWidget(self.lbl_tel_read_input_of_HDIB, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Считывание текущего шага многоступенчатой скорости"), r, 2)
+        layout.addWidget(self.lbl_tel_read_current_step, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Внешняя длина"), r, 2)
+        layout.addWidget(self.lbl_tel_external_length, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Значение внешнего счетчика"), r, 2)
+        layout.addWidget(self.lbl_tel_external_count_value, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Задание крутящего момента"), r, 2)
+        layout.addWidget(self.lbl_tel_torq_setting, r, 3)
+        r+=1
+        layout.addWidget(QtWidgets.QLabel("Идентификационный код"), r, 2)
+        layout.addWidget(self.lbl_tel_id_code, r, 3)
+        r+=1
+
+        layout.addWidget(QtWidgets.QLabel("Код ошибки"), r, 2)
+        layout.addWidget(self.lbl_tel_fault_code, r, 3)
+        r+=1
+
+        layout.addWidget(self.btn_refresh_tel, r, 0)
+        layout.addWidget(self.chk_tel_auto, r, 1)
+        layout.addWidget(QtWidgets.QLabel("Период, мс"), r, 2)
+        layout.addWidget(self.spin_tel_period, r, 3)
+
         return page
 
     def on_refresh_telemetry(self) -> None:
+        print("on_refresh_telemetry")
         if self._tel_busy:
             return
         self._tel_busy = True
 
-        # Читаем 0x2100 (SW1) → 0x2101(SW2) → 0x3000(6 байт) -> all_RW  по цепочке
+        # Читаем 0x2100 (SW1) → 0x2101(SW2) → 0x3000(16 байт) -> отстальный 11 ->  по цепочке
         def finish():
             # Сбрасываем флаг в конце любой ветки
             self._tel_busy = False
 
-        def after_SWs(data: Optional[List[int]]) -> None:
+        def after_SWs_first_16(data: Optional[List[int]]) -> None:
+            print(f"after_SWs_first_16  {data=}")
             """разбираем массив данных из ПЧ"""
             try:
-                if data and len(data) >= 3:
+                if data:
                     hz = (data[0] or 0) / 100.0
-                    # hz0 = (data[0] or 0) / 100.0 if data[0] is not None else None
-                    aim_hz = (data[1] or 0) / 100.0 if data[1] is not None else None
-                    velocity = (data[5] or 0) if data[5] is not None else None
                     self.lbl_tel_cur_freq.setText(f"{hz:.2f}")
+                    aim_hz = (data[1] or 0) / 100.0 if data[1] is not None else None
                     self.lbl_tel_aim_freq.setText(f"{aim_hz:.2f}")
+                    self.lbl_tel_volt_DC.setText(f"{(data[2] or 0) if data[2] is not None else None}")
+                    self.lbl_tel_out_volt.setText(f"{(data[3] or 0) if data[3] is not None else None}")
+                    self.lbl_tel_out_cur.setText(f"{(data[4] or 0) if data[4] is not None else None}")
+                    velocity = (data[5] or 0) if data[5] is not None else None
                     self.lbl_tel_velocity.setText(f"{velocity:.2f}")
+                    self.lbl_tel_out_pow.setText(f"{(data[6] or 0) if data[6] is not None else None}")
+                    self.lbl_tel_out_tor.setText(f"{(data[7] or 0) if data[7] is not None else None}")
+                    self.lbl_tel_out_clo.setText(f"{(data[8] or 0) if data[8] is not None else None}")
+                    # self.lbl_tel_external_count_value.setText(f"{(data[9] or 0) if data[9] is not None else None}")
+                    self.lbl_tel_out_power.setText(f"{(data[10] or 0) if data[10] is not None else None}")
+                    self.lbl_tel_out_torq.setText(f"{(data[11] or 0) if data[11] is not None else None}")
+                    self.lbl_tel_out_close_loop.setText(f"{(data[12] or 0) if data[12] is not None else None}")
+                    self.lbl_tel_out_close_loop_feedback.setText(f"{(data[13] or 0) if data[13] is not None else None}")
+                    self.lbl_tel_input_state.setText(f"{(data[14] or 0) if data[14] is not None else None}")
+                    self.lbl_tel_output_state.setText(f"{(data[15] or 0) if data[15] is not None else None}")
+                #     self.lbl_tel_analog_input_1 = (data[16] or 0) if data[16] is not None else None
+                #     self.lbl_tel_analog_input_2 = (data[17] or 0) if data[17] is not None else None
+                #     self.lbl_tel_analog_input_3 = (data[18] or 0) if data[18] is not None else None
+                #     self.lbl_tel_analog_input_4 = (data[19] or 0) if data[19] is not None else None
+                #     self.lbl_tel_read_input_of_HDIA = (data[20] or 0) if data[20] is not None else None
+                #     self.lbl_tel_read_input_of_HDIB = (data[21] or 0) if data[21] is not None else None
+                #     self.lbl_tel_read_current_step = (data[22] or 0) if data[22] is not None else None
+                #     self.lbl_tel_external_length = (data[23] or 0) if data[23] is not None else None
+                #     self.lbl_tel_id_code = (data[24] or 0) if data[24] is not None else None
+                #     self.lbl_tel_external_count_value = (data[25] or 0) if data[25] is not None else None
+                #     self.lbl_tel_torq_setting = (data[26] or 0) if data[26] is not None else None
                 else:
                     self.lbl_tel_cur_freq.setText("—")
-                    self.lbl_tel_aim_freq.setText("—")
-                    self.lbl_tel_velocity.setText("—")
+                    self.lbl_tel_aim_freq.setText("-")
+                    self.lbl_tel_volt_DC.setText("-")
+                    self.lbl_tel_out_volt.setText("-")
+                    self.lbl_tel_out_cur.setText("-")
+                    self.lbl_tel_velocity.setText("-")
+                    self.lbl_tel_out_pow.setText("-")
+                    self.lbl_tel_out_tor.setText("-")
+                    self.lbl_tel_out_clo.setText("-")
+                    self.lbl_tel_external_count_value.setText("-")
+                    self.lbl_tel_out_power.setText("-")
+                    self.lbl_tel_out_torq.setText("-")
+                    self.lbl_tel_out_close_loop.setText("-")
+                    self.lbl_tel_out_close_loop_feedback.setText("-")
+                    self.lbl_tel_input_state.setText("-")
+                    # self.lbl_tel_output_state.setText("-")
+                    # self.lbl_tel_analog_input_1.setText("-")
+                    # self.lbl_tel_analog_input_2.setText("-")
+                    # self.lbl_tel_analog_input_3.setText("-")
+                    # self.lbl_tel_analog_input_4.setText("-")
+                    # self.lbl_tel_read_input_of_HDIA.setText("-")
+                    # self.lbl_tel_read_input_of_HDIB.setText("-")
+                    # self.lbl_tel_read_current_step.setText("-")
+                    # self.lbl_tel_external_length.setText("-")
+                    # self.lbl_tel_external_count_value.setText("-")
+                    # self.lbl_tel_torq_setting.setText("-")
+                    # self.lbl_tel_id_code.setText("-")
+            finally:
+                self._submit(self.modbus.read_holding, after_SWs_second_16, 0x300A, 11)  # удавалось считывать 16 адресов максимум
+
+        def after_SWs_second_16(data: Optional[List[int]]) -> None:
+            print(f"after_Safter_SWs_second_16  {data=}")
+            """разбираем массив данных из ПЧ"""
+            try:
+                if data:
+                    self.lbl_tel_analog_input_1 = (data[0] or 0) if data[0] is not None else None
+                    self.lbl_tel_analog_input_2 = (data[1] or 0) if data[1] is not None else None
+                    self.lbl_tel_analog_input_3 = (data[2] or 0) if data[2] is not None else None
+                    self.lbl_tel_analog_input_4 = (data[3] or 0) if data[3] is not None else None
+                    self.lbl_tel_read_input_of_HDIA = (data[4] or 0) if data[4] is not None else None
+                    self.lbl_tel_read_input_of_HDIB = (data[5] or 0) if data[5] is not None else None
+                    self.lbl_tel_read_current_step = (data[6] or 0) if data[6] is not None else None
+                    self.lbl_tel_external_length = (data[7] or 0) if data[7] is not None else None
+                    self.lbl_tel_id_code = (data[8] or 0) if data[8] is not None else None
+                    self.lbl_tel_external_count_value = (data[9] or 0) if data[9] is not None else None
+                    self.lbl_tel_torq_setting = (data[10] or 0) if data[10] is not None else None
+                else:
+                    self.lbl_tel_output_state.setText("-")
+                    self.lbl_tel_analog_input_1.setText("-")
+                    self.lbl_tel_analog_input_2.setText("-")
+                    self.lbl_tel_analog_input_3.setText("-")
+                    self.lbl_tel_analog_input_4.setText("-")
+                    self.lbl_tel_read_input_of_HDIA.setText("-")
+                    self.lbl_tel_read_input_of_HDIB.setText("-")
+                    self.lbl_tel_read_current_step.setText("-")
+                    self.lbl_tel_external_length.setText("-")
+                    self.lbl_tel_external_count_value.setText("-")
+                    self.lbl_tel_torq_setting.setText("-")
+                    self.lbl_tel_id_code.setText("-")
             finally:
                 finish()
 
-        def all_RW(data: Optional[List[int]]) -> None:
-            """разбираем массив данных из ПЧ"""
+        def read_cw2(data: Optional[List[int]]) -> None:
+            print("read_cw2")
             try:
-                if data and len(data) >= 3:
-                    hz = (data[0] or 0) / 100.0
-                    # hz0 = (data[0] or 0) / 100.0 if data[0] is not None else None
-                    aim_hz = (data[1] or 0) / 100.0 if data[1] is not None else None
-                    velocity = (data[5] or 0) if data[5] is not None else None
-                    self.lbl_tel_cur_freq.setText(f"{hz:.2f}")
-                    self.lbl_tel_aim_freq.setText(f"{aim_hz:.2f}")
-                    self.lbl_tel_velocity.setText(f"{velocity:.2f}")
-                else:
-                    self.lbl_tel_cur_freq.setText("—")
-                    self.lbl_tel_aim_freq.setText("—")
-                    self.lbl_tel_velocity.setText("—")
-            finally:
-                finish()
-        
-
-        def read_cw2(data2: Optional[List[int]]) -> None:
-            try:
-                val2 = data2[0] if data2 and len(data2) > 0 else None
+                val2 = data[0] if data and len(data) > 0 else None
                 if val2 is not None:
                     cw2 = decode_SW2(int(val2))
                     self.lbl_tel_ready.setText("Готов" if cw2["ready"] else "Не готов")
@@ -548,11 +667,11 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
                         w.setText("—")
             finally:
                 # Третье чтение — частота
-                self._submit(self.modbus.read_holding, after_SWs, 0x3000, 6)
+                self._submit(self.modbus.read_holding, after_SWs_first_16, 0x3000, 16)  # 16 адресов максимум
 
-
-        def read_cw1(data1: Optional[List[int]]) -> None:
-            val1 = data1[0] if data1 and len(data1) > 0 else None
+        def read_cw1(data: Optional[List[int]]) -> None:
+            print("f{read_cw1 -> }")
+            val1 = data[0] if data and len(data) > 0 else None
             if val1 is not None:
                 self.lbl_tel_state1.setText(decode_SW1(int(val1)))
                 self.lbl_tel_state1_raw.setText(f"0x{int(val1):04X}")
