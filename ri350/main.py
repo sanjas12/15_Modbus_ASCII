@@ -146,14 +146,6 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self._connected: bool = False
         self._tel_busy: bool = False
 
-        # Communication RW settings 
-        # self.signals = Signals()
-# 
-        # for name, config in self.signals.parameters.items():
-        #     self.signals.parameters[name].spin_box = QtWidgets.QDoubleSpinBox()
-        #     self.signals.parameters[name].btn_set = QtWidgets.QPushButton(config.description)
-        #     # print(f"{config.description=}")
-
         self._build_ui()
         self._wire_signals()
 
@@ -280,28 +272,28 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
 
         # RI350
         self.btn_cmd_fwd.clicked.connect(
-            lambda: self.send_ri350_command(0x0001, "Вперед")
+            lambda: self.comand_to_control_motor(0x0001, "Вперед")
         )
         self.btn_cmd_rev.clicked.connect(
-            lambda: self.send_ri350_command(0x0002, "Назад")
+            lambda: self.comand_to_control_motor(0x0002, "Назад")
         )
         self.btn_cmd_jog_fwd.clicked.connect(
-            lambda: self.send_ri350_command(0x0003, "Толчок вперед")
+            lambda: self.comand_to_control_motor(0x0003, "Толчок вперед")
         )
         self.btn_cmd_jog_rev.clicked.connect(
-            lambda: self.send_ri350_command(0x0004, "Толчок назад")
+            lambda: self.comand_to_control_motor(0x0004, "Толчок назад")
         )
         self.btn_cmd_stop.clicked.connect(
-            lambda: self.send_ri350_command(0x0005, "Стоп")
+            lambda: self.comand_to_control_motor(0x0005, "Стоп")
         )
         self.btn_cmd_estop.clicked.connect(
-            lambda: self.send_ri350_command(0x0006, "Аварийный останов")
+            lambda: self.comand_to_control_motor(0x0006, "Аварийный останов")
         )
         self.btn_cmd_reset.clicked.connect(
-            lambda: self.send_ri350_command(0x0007, "Сброс ошибки")
+            lambda: self.comand_to_control_motor(0x0007, "Сброс ошибки")
         )
         self.btn_cmd_jog_to_stop.clicked.connect(
-            lambda: self.send_ri350_command(0x0008, "Толчок для останова")
+            lambda: self.comand_to_control_motor(0x0008, "Толчок для останова")
         )
 
         # Telemetry
@@ -311,14 +303,6 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self.spin_tel_period.valueChanged.connect(
             lambda _v: self._start_telemetry_timer()
         )
-
-        # RI350 setpoints
-        # self.btn_set_freq.clicked.connect(
-            # lambda: self.set_register_value(self.spin_freq, 0x2001, 100, "частоту (Гц)")
-        # )
-        # self.btn_read_freq.clicked.connect(self.on_read_frequency)
-        # self.btn_set_pid.clicked.connect(self.on_set_pid)
-        # self.btn_read_pid.clicked.connect(self.on_read_pid)
 
     def _build_ri350_tab(self) -> QtWidgets.QWidget:
         page = QtWidgets.QWidget()
@@ -337,58 +321,25 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.btn_cmd_reset, 4, 0)
         layout.addWidget(self.btn_cmd_jog_to_stop, 4, 1)
 
-        # Communication RW settings
-        # signals = Signals()
-        
+       
         com_setting_box = QtWidgets.QGroupBox("Communication RW settings ")
         com_setting_layout = QtWidgets.QGridLayout(com_setting_box)
         
-        
-        row = 6
-        freq_box = QtWidgets.QGroupBox("Задание частоты (регистр 0x2001, шаг 0.01 Гц)")
-        freq_layout = QtWidgets.QGridLayout(freq_box)
-        # self.spin_freq.setDecimals(2)
-        # self.spin_freq.setSingleStep(0.01)
-        # self.spin_freq.setRange(0.00, 400.00)
-        # self.spin_freq.setValue(50.00)
-        freq_layout.addWidget(QtWidgets.QLabel("Частота, Гц"), 0, 0)
-        # freq_layout.addWidget(self.spin_freq, 0, 1)
-        # freq_layout.addWidget(self.btn_set_freq, 0, 2)
-        # freq_layout.addWidget(self.btn_read_freq, 0, 3)
-        # layout.addWidget(freq_box, row, 0, 1, 2)
-        row += 1
-
-        pid_box = QtWidgets.QGroupBox("ПИД задание (регистр 0x2002, 1000 = 100.0%)")
-        pid_layout = QtWidgets.QGridLayout(pid_box)
-        # self.spin_pid_set.setDecimals(1)
-        # self.spin_pid_set.setSingleStep(0.1)
-        # self.spin_pid_set.setRange(0.0, 100.0)
-        # self.spin_pid_set.setValue(0.0)
-        pid_layout.addWidget(QtWidgets.QLabel("ПИД, %"), 0, 0)
-        # pid_layout.addWidget(self.spin_pid_set, 0, 1)
-        # pid_layout.addWidget(self.btn_set_pid, 0, 2)
-        # pid_layout.addWidget(self.btn_read_pid, 0, 3)
-        # layout.addWidget(pid_box, row, 0, 1, 2)
-        row += 1
-
         self.signals = Signals()
-
 
         for row, (name, parameter) in enumerate(self.signals.parameters.items()):
             com_setting_layout.addWidget(QtWidgets.QLabel(name), row, 0)
             com_setting_layout.addWidget(parameter.spin_box, row, 1)
             parameter.spin_box.setValue(parameter.default_value)
             parameter.spin_box.setSingleStep(parameter.single_step)
-        #             self.spin_tel_period.setRange(100, 10000)
+            parameter.spin_box.setRange(*parameter.range)
             com_setting_layout.addWidget(parameter.btn_set, row, 2)
             parameter.btn_set.clicked.connect(lambda: self.set_register_value(parameter.spin_box, parameter.modbus_address, 1, name))
-             # self.btn_read_freq.clicked.connect(self.on_read_frequency)
-                        # lambda: self.set_register_value(self.spin_freq, 0x2001, 100, "частоту (Гц)"))
         layout.addWidget(com_setting_box, row, 0, 1, 2)
 
         return page
 
-    def send_ri350_command(self, code: int, title: str) -> None:
+    def comand_to_control_motor(self, code: int, title: str) -> None:
         address = 0x2000
 
         def after(ok: bool) -> None:
