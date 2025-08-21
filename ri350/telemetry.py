@@ -35,7 +35,7 @@ def decode_SW2(value: int) -> dict:
         "motor_type": "Синхронный" if (value & (1 << 3)) else "Асинхронный",
         "overload": bool(value & (1 << 4)),
         "ctrl_src": ctrl_src_map.get((value >> 5) & 0b11, f"Код {(value >> 5) & 0b11}"),
-        "mode": "Крутящий момент" if (value & (1 << 8)) else "Скорость",
+        "mode": "Контроль крутящего момента" if (value & (1 << 8)) else "Контроль cкорости",
         "position": bool(value & (1 << 9)),
         "vector": vector_map.get((value >> 10) & 0b11, f"Код {(value >> 10) & 0b11}"),
     }
