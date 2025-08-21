@@ -17,7 +17,7 @@ class ParameterConfig:
 
     def __post_init__(self):
         if self.btn_set is None:
-            self.btn_set = QtWidgets.QPushButton(self.description)
+            self.btn_set = QtWidgets.QPushButton(self.button_name)
         if self.spin_box is None:
             self.spin_box = QtWidgets.QDoubleSpinBox()
 
@@ -47,8 +47,8 @@ class Signals:
                 description="ПИД задание, %",
                 default_value=0,
                 button_name="Задать ПИД",
-                range=(0, 100),
-                single_step=0.1
+                range=(0, 1000),
+                single_step=50
             ),
             "Задать ПИД обратную связь": ParameterConfig(
                 modbus_address="0x2003",
@@ -134,17 +134,17 @@ class Signals:
                 modbus_address="0x200D",
                 description="Задание выхода АО1",
                 default_value=0,
-                button_name="Заданить выход АО1",
-                range=(0, 100),
-                single_step=0.1
+                button_name="Задать выход АО1",
+                range=(-1000, 1000),
+                single_step=10
             ),
             "Задание выхода АО2": ParameterConfig(
                 modbus_address="0x200E",
                 description="Задание выхода АО2",
                 default_value=0,
-                button_name="Заданить выход АО2",
-                range=(0, 100),
-                single_step=0.1
+                button_name="Задать выход АО2",
+                range=(-1000, 1000),
+                single_step=10
             )
         }
 
