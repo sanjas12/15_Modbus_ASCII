@@ -329,15 +329,39 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
 
         for row, (name, parameter) in enumerate(self.signals.parameters.items()):
             com_setting_layout.addWidget(QtWidgets.QLabel(name), row, 0)
+            
             com_setting_layout.addWidget(parameter.spin_box, row, 1)
             parameter.spin_box.setValue(parameter.default_value)
             parameter.spin_box.setSingleStep(parameter.single_step)
             parameter.spin_box.setRange(*parameter.range)
+            
             com_setting_layout.addWidget(parameter.btn_set, row, 2)
             parameter.btn_set.clicked.connect(lambda: self.set_register_value(parameter.spin_box, parameter.modbus_address, 1, name))
+        
+
+        self.spin_test = QtWidgets.QSpinBox()
+        self.spin_test.setValue(1)
+        self.spin_test.setSingleStep(1)
+        self.spin_test.setRange(1,2)
+        self.btn_test = QtWidgets.QPushButton("Задать входы")
+        com_setting_layout.addWidget(self.btn_test, row+1, 2)
+        com_setting_layout.addWidget(self.spin_test, row+1, 1)
+        self.btn_test.clicked.connect(lambda: self.test(self.spin_test.value(), "Test"))
         layout.addWidget(com_setting_box, row, 0, 1, 2)
 
         return page
+
+    def test(self, code: int, title: str) -> None:
+        address = 0x200E
+
+        def after(ok: bool) -> None:
+            self.log(
+                f"RI350: {title} → регистр 0x{address:04X} значение 0x{code:04X} — "
+                f"{'OK' if ok else 'ОШИБКА'}"
+            )
+
+        self._submit(self.modbus.write_single_register, after, address, int(code))
+
 
     def comand_to_control_motor(self, code: int, title: str) -> None:
         address = 0x2000
@@ -480,7 +504,7 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         return page
 
     def on_refresh_telemetry(self) -> None:
-        print("on_refresh_telemetry")
+        # print("on_refresh_telemetry")
         if self._tel_busy:
             return
         self._tel_busy = True
@@ -491,7 +515,6 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
             self._tel_busy = False
 
         def after_SWs_first_16(data: Optional[List[int]]) -> None:
-            print(f"after_SWs_first_16  {data=}")
             """разбираем массив данных из ПЧ"""
             try:
                 if data:
@@ -514,17 +537,6 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
                     self.lbl_tel_out_close_loop_feedback.setText(f"{(data[13] or 0) if data[13] is not None else None}")
                     self.lbl_tel_input_state.setText(f"{(data[14] or 0) if data[14] is not None else None}")
                     self.lbl_tel_output_state.setText(f"{(data[15] or 0) if data[15] is not None else None}")
-                #     self.lbl_tel_analog_input_1 = (data[16] or 0) if data[16] is not None else None
-                #     self.lbl_tel_analog_input_2 = (data[17] or 0) if data[17] is not None else None
-                #     self.lbl_tel_analog_input_3 = (data[18] or 0) if data[18] is not None else None
-                #     self.lbl_tel_analog_input_4 = (data[19] or 0) if data[19] is not None else None
-                #     self.lbl_tel_read_input_of_HDIA = (data[20] or 0) if data[20] is not None else None
-                #     self.lbl_tel_read_input_of_HDIB = (data[21] or 0) if data[21] is not None else None
-                #     self.lbl_tel_read_current_step = (data[22] or 0) if data[22] is not None else None
-                #     self.lbl_tel_external_length = (data[23] or 0) if data[23] is not None else None
-                #     self.lbl_tel_id_code = (data[24] or 0) if data[24] is not None else None
-                #     self.lbl_tel_external_count_value = (data[25] or 0) if data[25] is not None else None
-                #     self.lbl_tel_torq_setting = (data[26] or 0) if data[26] is not None else None
                 else:
                     self.lbl_tel_cur_freq.setText("—")
                     self.lbl_tel_aim_freq.setText("-")
@@ -541,23 +553,12 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
                     self.lbl_tel_out_close_loop.setText("-")
                     self.lbl_tel_out_close_loop_feedback.setText("-")
                     self.lbl_tel_input_state.setText("-")
-                    # self.lbl_tel_output_state.setText("-")
-                    # self.lbl_tel_analog_input_1.setText("-")
-                    # self.lbl_tel_analog_input_2.setText("-")
-                    # self.lbl_tel_analog_input_3.setText("-")
-                    # self.lbl_tel_analog_input_4.setText("-")
-                    # self.lbl_tel_read_input_of_HDIA.setText("-")
-                    # self.lbl_tel_read_input_of_HDIB.setText("-")
-                    # self.lbl_tel_read_current_step.setText("-")
-                    # self.lbl_tel_external_length.setText("-")
-                    # self.lbl_tel_external_count_value.setText("-")
-                    # self.lbl_tel_torq_setting.setText("-")
-                    # self.lbl_tel_id_code.setText("-")
+                    self.lbl_tel_output_state.setText("-")
             finally:
                 self._submit(self.modbus.read_holding, after_SWs_second_16, 0x300A, 11)  # удавалось считывать 16 адресов максимум
 
         def after_SWs_second_16(data: Optional[List[int]]) -> None:
-            print(f"after_Safter_SWs_second_16  {data=}")
+            # print(f"after_Safter_SWs_second_16  {data=}")
             """разбираем массив данных из ПЧ"""
             try:
                 if data:
@@ -569,11 +570,10 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
                     self.lbl_tel_read_input_of_HDIB = (data[5] or 0) if data[5] is not None else None
                     self.lbl_tel_read_current_step = (data[6] or 0) if data[6] is not None else None
                     self.lbl_tel_external_length = (data[7] or 0) if data[7] is not None else None
-                    self.lbl_tel_id_code = (data[8] or 0) if data[8] is not None else None
                     self.lbl_tel_external_count_value = (data[9] or 0) if data[9] is not None else None
+                    self.lbl_tel_id_code = (data[8] or 0) if data[8] is not None else None
                     self.lbl_tel_torq_setting = (data[10] or 0) if data[10] is not None else None
                 else:
-                    self.lbl_tel_output_state.setText("-")
                     self.lbl_tel_analog_input_1.setText("-")
                     self.lbl_tel_analog_input_2.setText("-")
                     self.lbl_tel_analog_input_3.setText("-")
@@ -583,68 +583,66 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
                     self.lbl_tel_read_current_step.setText("-")
                     self.lbl_tel_external_length.setText("-")
                     self.lbl_tel_external_count_value.setText("-")
-                    self.lbl_tel_torq_setting.setText("-")
                     self.lbl_tel_id_code.setText("-")
+                    self.lbl_tel_torq_setting.setText("-")
             finally:
                 finish()
 
-        def read_cw2(data: Optional[List[int]]) -> None:
-            print("read_cw2")
-            try:
-                val2 = data[0] if data and len(data) > 0 else None
-                if val2 is not None:
-                    cw2 = decode_SW2(int(val2))
-                    self.lbl_tel_ready.setText("Готов" if cw2["ready"] else "Не готов")
-                    self.lbl_tel_motor_sel.setText(cw2["motor_sel"])
-                    self.lbl_tel_motor_type.setText(cw2["motor_type"])
-                    self.lbl_tel_overload.setText("Есть" if cw2["overload"] else "Нет")
-                    self.lbl_tel_ctrl_src.setText(cw2["ctrl_src"])
-                    self.lbl_tel_mode.setText(cw2["mode"])
-                    self.lbl_tel_position.setText("Вкл" if cw2["position"] else "Выкл")
-                    self.lbl_tel_vector.setText(cw2["vector"])
-                    self.lbl_tel_state2_raw.setText(f"0x{int(val2):04X}")
-                else:
-                    for w in (
-                        self.lbl_tel_ready,
-                        self.lbl_tel_motor_sel,
-                        self.lbl_tel_motor_type,
-                        self.lbl_tel_overload,
-                        self.lbl_tel_ctrl_src,
-                        self.lbl_tel_mode,
-                        self.lbl_tel_position,
-                        self.lbl_tel_vector,
-                        self.lbl_tel_state2_raw,
-                    ):
-                        w.setText("—")
-            finally:
-                # Третье чтение — частота
-                self._submit(self.modbus.read_holding, after_SWs_first_16, 0x3000, 16)  # 16 адресов максимум
-
-        def read_cw1(data: Optional[List[int]]) -> None:
-            print("f{read_cw1 -> }")
-            val1 = data[0] if data and len(data) > 0 else None
-            if val1 is not None:
-                self.lbl_tel_state1.setText(decode_SW1(int(val1)))
-                self.lbl_tel_state1_raw.setText(f"0x{int(val1):04X}")
+        def read_cw(data: Optional[List[int]]) -> None:
+            cw1 = data[0] if data and len(data) > 0 else None
+            cw2 = data[1] if data and len(data) > 0 else None
+            
+            if cw1 is not None:
+                self.lbl_tel_state1.setText(decode_SW1(int(cw1)))
+                self.lbl_tel_state1_raw.setText(f"0x{int(cw1):04X}")
             else:
                 self.lbl_tel_state1.setText("—")
                 self.lbl_tel_state1_raw.setText("—")
-            # второе чтение
-            self._submit(self.modbus.read_holding, read_cw2, 0x2101, 1)
+
+            if cw2 is not None:
+                cw2 = decode_SW2(int(cw2))
+                # self.lbl_tel_state2_raw.setText(f"0x{int(cw2):04X}")
+                self.lbl_tel_ready.setText("Готов" if
+                cw2["ready"] else "Не готов")
+                self.lbl_tel_motor_sel.setText(cw2["motor_sel"])
+                self.lbl_tel_motor_type.setText(cw2["motor_type"])
+                self.lbl_tel_overload.setText("Есть" if cw2["overload"] else "Нет")
+                self.lbl_tel_ctrl_src.setText(cw2["ctrl_src"])
+                self.lbl_tel_mode.setText(cw2["mode"])
+                self.lbl_tel_position.setText("Вкл" if cw2["position"] else "Выкл")
+                self.lbl_tel_vector.setText(cw2["vector"])
+            else:
+                for w in (
+                    self.lbl_tel_ready,
+                    self.lbl_tel_motor_sel,
+                    self.lbl_tel_motor_type,
+                    self.lbl_tel_overload,
+                    self.lbl_tel_ctrl_src,
+                    self.lbl_tel_mode,
+                    self.lbl_tel_position,
+                    self.lbl_tel_vector,
+                    self.lbl_tel_state2_raw,
+                ):
+                    w.setText("—")
+                # второе чтение
+            self._submit(self.modbus.read_holding, after_SWs_first_16, 0x3000, 16)  # 16 адресов максимум       
 
         # первое чтение
-        self._submit(self.modbus.read_holding, read_cw1, 0x2100, 1)
+        self._submit(self.modbus.read_holding, read_cw, 0x2100, 4)
 
     # --- RI350 setpoints handlers ---
-    def set_register_value(self, spinbox: QtWidgets.QDoubleSpinBox, address: int, scale: float, title: str) -> None:
-        value = float(spinbox.value())
+    def set_register_value(self, spinbox, address: int, scale: float, title: str) -> None:
+        value = spinbox
+        # value = float(spinbox.value())
+        print(f"{value=}  {address=}")
         reg_val = int(round(value * scale))
         def after(ok: bool) -> None:
             self.log(
                 f"{self.DEVICE}: задать {title} {value:.2f} (0x{reg_val:04X}) → регистр 0x{address:04X} — "
                 f"{'OK' if ok else 'ОШИБКА'}"
             )
-        self._submit(self.modbus.write_single_register, after, address, reg_val)
+        print(reg_val)
+        self._submit(self.modbus.write_single_register, after, address, bin(reg_val))
 
     def on_set_frequency(self) -> None:
         self.set_register_value(self.spin_freq, 0x2001, 100, "частоту (Гц)")
