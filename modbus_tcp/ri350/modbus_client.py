@@ -43,6 +43,14 @@ class ModbusClientWrapper:
             if self._client is not None:
                 self._client.close()
 
+    def is_connected(self) -> bool:
+        """Проверка, установлено ли соединение с Modbus."""
+        with self._lock:
+            if self._client is None:
+                return False
+            # is_open — это БУЛЕВО СВОЙСТВО, без скобок
+            return bool(self._client.is_open)
+
     # --- Read operations ---
     def read_holding(self, address: int, quantity: int) -> Optional[List[int]]:
         with self._lock:
