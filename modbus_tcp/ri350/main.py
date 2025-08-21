@@ -354,8 +354,10 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
                 f"RI350: {title} → регистр 0x{address:04X} значение 0x{code:04X} — "
                 f"{'OK' if ok else 'ОШИБКА'}"
             )
-
-        self._submit(self.modbus.write_single_register, after, address, int(code))
+        if self.modbus.is_connected():
+            self._submit(self.modbus.write_single_register, after, address, int(code))
+        else:
+            self.show_error(f"RI350: Задать DI входы → {self.modbus.NOT_CONNECT}")
 
     def comand_to_control_motor(self, code: int, title: str) -> None:
         address = 0x2000
