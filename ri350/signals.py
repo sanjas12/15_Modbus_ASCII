@@ -18,6 +18,8 @@ class ParameterConfig:
     def __post_init__(self):
         if self.btn_set is None:
             self.btn_set = QtWidgets.QPushButton(self.description)
+        if self.spin_box is None:
+            self.spin_box = QtWidgets.QDoubleSpinBox()
 
 @dataclass
 class Signals:
@@ -230,6 +232,7 @@ if __name__ == "__main__":
     for name, parameter in signals.parameters.items():
         # print(f"{name}: {config}")
         print(f"{parameter.description=}, {parameter.btn_set=}")
+        print(f"{parameter.description=}, {parameter.spin_box=}")
 
     # print(Signals.get_modbus_address("Задать частоту"))  # Output: 2001
     # print(Signals.get_default_value("Задать ПИД, %"))    # Output: 75.0
