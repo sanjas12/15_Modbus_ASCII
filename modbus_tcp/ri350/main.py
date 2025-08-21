@@ -1,6 +1,6 @@
 import sys
 from typing import List, Optional
-
+from functools import partial
 from PyQt5 import QtCore, QtWidgets
 
 from modbus_client import ModbusClientWrapper
@@ -331,17 +331,27 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
             parameter.spin_box.setRange(*parameter.range)
             
             com_setting_layout.addWidget(parameter.btn_set, row, 2)
-            parameter.btn_set.clicked.connect(lambda: self.set_register_value(parameter.spin_box, parameter.modbus_address, 1, name))
-        
+            # FIX: позднее связывание лямбд => используем partial
+            parameter.btn_set.clicked.connect(
+                partial(
+                    self.set_register_value,
+                    parameter.spin_box,
+                    parameter.modbus_address,
+                    1,
+                    name,
+                )
+            )
+
         # row = 0
-        self.spin_test = QtWidgets.QSpinBox()
-        self.spin_test.setValue(0)
-        self.spin_test.setSingleStep(1)
-        self.spin_test.setRange(0,15)
-        self.btn_test = QtWidgets.QPushButton("Задать входы")
-        com_setting_layout.addWidget(self.btn_test, row+1, 2)
-        com_setting_layout.addWidget(self.spin_test, row+1, 1)
-        self.btn_test.clicked.connect(lambda: self.test(self.spin_test.value(), "Test"))
+        # self.spin_test = QtWidgets.QSpinBox()
+        # self.spin_test.setValue(0)
+        # self.spin_test.setSingleStep(1)
+        # self.spin_test.setRange(0,15)
+        # self.btn_test = QtWidgets.QPushButton("Задать входы")
+        # com_setting_layout.addWidget(self.btn_test, row+1, 2)
+        # com_setting_layout.addWidget(self.spin_test, row+1, 1)
+        # self.btn_test.clicked.connect(lambda: self.test(self.spin_test.value(), "Test"))
+        
         layout.addWidget(com_setting_box, row, 0, 1, 2)
 
         return page
@@ -623,9 +633,9 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self._submit(self.modbus.read_holding, read_cw, 0x2100, 4)
 
     # --- RI350 setpoints handlers ---
-    def set_register_value(self, spinbox, address: int, scale: float, title: str) -> None:
-        value = spinbox
-        # value = float(spinbox.value())
+    def set_register_value(self, spinbox: QtWidgets.QDoubleSpinBox, address: int, scale: float, title: str) -> None:
+        value = float(spinbox.value())
+        reg_val = int(round(value * scale))
         print(f"{value=}  {address=}")
         reg_val = int(round(value * scale))
         def after(ok: bool) -> None:
