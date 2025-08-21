@@ -1,14 +1,23 @@
 from dataclasses import dataclass, field
 from typing import Dict, Any
+from PyQt5 import QtWidgets
 
 @dataclass
 class ParameterConfig:
     """Configuration for a single parameter containing Modbus address, default value, and button name."""
     modbus_address: str  # Hexadecimal string, e.g., '0x2001'
+    description: str     # Description of the parameter
     default_value: Any
     button_name: str
     range: tuple
     single_step: float = 0.1
+    from typing import Optional
+    spin_box: Optional[QtWidgets.QDoubleSpinBox] = None
+    btn_set: Optional[QtWidgets.QPushButton] = None
+
+    def __post_init__(self):
+        if self.btn_set is None:
+            self.btn_set = QtWidgets.QPushButton(self.description)
 
 @dataclass
 class Signals:
@@ -23,15 +32,17 @@ class Signals:
     def _init_predefined_parameters(self):
         """Initialize all predefined parameter configurations."""
         predefined_params = {
-            "Задание частоты, Гц ": ParameterConfig(
+            "Задание частоты, шаг 0.01 Гц ": ParameterConfig(
                 modbus_address="0x2001",
+                description="Задание частоты, шаг 0.01 Гц",
                 default_value=50,
                 button_name="Задать частоту",
                 range=(0, 100),
-                single_step=0.1
+                single_step=0.01
             ),
             "ПИД задание, %": ParameterConfig(
                 modbus_address="0x2002",
+                description="ПИД задание, %",
                 default_value=0,
                 button_name="Задать ПИД",
                 range=(0, 100),
@@ -39,6 +50,7 @@ class Signals:
             ),
             "Задать ПИД обратную связь": ParameterConfig(
                 modbus_address="0x2003",
+                description="Задать ПИД обратную связь",
                 default_value=0,
                 button_name="btn_set_pid_feedback",
                 range=(0, 100),
@@ -46,6 +58,7 @@ class Signals:
             ),
             "Задать момент": ParameterConfig(
                 modbus_address="0x2004",
+                description="Задать момент",
                 default_value=0,
                 button_name="btn_set_torque",
                 range=(0, 100),
@@ -53,6 +66,7 @@ class Signals:
             ),
             "Задать предел прямой час": ParameterConfig(
                 modbus_address="0x2005",
+                description="Задать предел прямой час",
                 default_value=0,
                 button_name="btn_set_forward_limit",
                 range=(0, 100),
@@ -60,6 +74,7 @@ class Signals:
             ),
             "Задать предел обратной ч": ParameterConfig(
                 modbus_address="0x2006",
+                description="Задать предел обратной ч",
                 default_value=0,
                 button_name="btn_set_reverse_limit",
                 range=(0, 100),
@@ -67,6 +82,7 @@ class Signals:
             ),
             "Задать предел момента": ParameterConfig(
                 modbus_address="0x2007",
+                description="Задать предел момента",
                 default_value=0,
                 button_name="btn_set_torque_limit",
                 range=(0, 100),
@@ -74,6 +90,7 @@ class Signals:
             ),
             "Задать предел тормозного": ParameterConfig(
                 modbus_address="0x2008",
+                description="Задать предел тормозного",
                 default_value=0,
                 button_name="btn_set_brake_limit",
                 range=(0, 100),
@@ -81,6 +98,7 @@ class Signals:
             ),
             "Задать управляющее слово": ParameterConfig(
                 modbus_address="0x2009",
+                description="Задать управляющее слово",
                 default_value=0,
                 button_name="btn_set_control_word",
                 range=(0, 100),
@@ -88,6 +106,7 @@ class Signals:
             ),
             "Задать виртуальные входы": ParameterConfig(
                 modbus_address="0x200A",
+                description="Задать виртуальные входы",
                 default_value=0,
                 button_name="btn_set_virtual_inputs",
                 range=(0, 100),
@@ -95,6 +114,7 @@ class Signals:
             ),
             "Задать виртуальные выходы": ParameterConfig(
                 modbus_address="0x200B",
+                description="Задать виртуальные выходы",
                 default_value=0,
                 button_name="btn_set_virtual_outputs",
                 range=(0, 100),
@@ -102,6 +122,7 @@ class Signals:
             ),
             "Задать напряжение": ParameterConfig(
                 modbus_address="0x200C",
+                description="Задать напряжение",
                 default_value=0,
                 button_name="btn_set_voltage",
                 range=(0, 100),
@@ -109,6 +130,7 @@ class Signals:
             ),
             "Задание выхода АО1": ParameterConfig(
                 modbus_address="0x200D",
+                description="Задание выхода АО1",
                 default_value=0,
                 button_name="Заданить выход АО1",
                 range=(0, 100),
@@ -116,6 +138,7 @@ class Signals:
             ),
             "Задание выхода АО2": ParameterConfig(
                 modbus_address="0x200E",
+                description="Задание выхода АО2",
                 default_value=0,
                 button_name="Заданить выход АО2",
                 range=(0, 100),
@@ -129,6 +152,7 @@ class Signals:
         """Add a new parameter configuration."""
         self.parameters[parameter_name] = ParameterConfig(
             modbus_address=hex(modbus_address) if isinstance(modbus_address, int) else modbus_address,
+            description=parameter_name,
             default_value=default_value,
             button_name=button_name,
             range=range,
@@ -187,12 +211,25 @@ class Signals:
 
 
 if __name__ == "__main__":
-    
+    from PyQt5.QtWidgets import QApplication
+    import sys
+
+    # Create QApplication before any QWidget
+    app = QApplication(sys.argv)
+
     # Example usage:
     signals = Signals()
 
-    for name, config in signals.parameters.items():
-        print(f"{name}: {config}")
+    spin_pid_feedback = QtWidgets.QDoubleSpinBox()
+    spin_torque = QtWidgets.QDoubleSpinBox()
+
+    # Добавляем spin_pid_feedback и spin_torque в signals
+    # signals.parameters["Задать ПИД обратную связь"].spin_box = spin_pid_feedback
+    # signals.parameters["Задание выхода АО2"].spin_box = spin_torque
+
+    for name, parameter in signals.parameters.items():
+        # print(f"{name}: {config}")
+        print(f"{parameter.description=}, {parameter.btn_set=}")
 
     # print(Signals.get_modbus_address("Задать частоту"))  # Output: 2001
     # print(Signals.get_default_value("Задать ПИД, %"))    # Output: 75.0
