@@ -1,5 +1,5 @@
 import sys
-from typing import List, Optional
+from typing import List, Optional, Any, Callable
 from functools import partial
 from PyQt5 import QtCore, QtWidgets
 
@@ -708,8 +708,8 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
         self.lbl_status.setStyleSheet("color: #0a0;" if ok else "color: #a00;")
         self._connected = bool(ok)
 
-    def _submit(self, fn, on_result, *args, **kwargs) -> None:
-        job = Runnable(fn, *args, **kwargs)
+    def _submit(self, function: Callable[..., Any], on_result: Callable[[Any], None], *args: Any, **kwargs: Any,) -> None:
+        job = Runnable(function, *args, **kwargs)
         job.signals.result.connect(on_result)
         job.signals.error.connect(lambda e: self.show_error(f"Ошибка: {e}"))
         self.thread_pool.start(job)
