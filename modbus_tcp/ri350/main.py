@@ -382,132 +382,76 @@ class VFDModbusWindow(QtWidgets.QMainWindow):
 
     # --- Telemetry (address_R) ---
     def _build_telemetry_group(self) -> QtWidgets.QGroupBox:
-        page = QtWidgets.QGroupBox("Телеметрия")
-        layout = QtWidgets.QGridLayout(page)
+        """Создание группы элементов UI для отображения телеметрии."""
+        telemetry_group = QtWidgets.QGroupBox("Телеметрия")
+        layout = QtWidgets.QGridLayout(telemetry_group)
 
-        r = 0
-        layout.addWidget(QtWidgets.QLabel("ПЧ слово состояния 1 (0x2100)"), r, 0, 1, 2)
-        r += 1
-        layout.addWidget(QtWidgets.QLabel("Состояние"), r, 0)
-        layout.addWidget(self.lbl_tel_state1, r, 1)
-        r += 1
-        layout.addWidget(QtWidgets.QLabel("RAW"), r, 0)
-        layout.addWidget(self.lbl_tel_state1_raw, r, 1)
-        r += 1
-        layout.addWidget(QtWidgets.QLabel("ПЧ слово состояния 2 (0x2101)"), r, 0, 1, 2)
-        r += 1
-        layout.addWidget(QtWidgets.QLabel("Готов к запуску"), r, 0)
-        layout.addWidget(self.lbl_tel_ready, r, 1)
-        r += 1
-        layout.addWidget(QtWidgets.QLabel("Выбран двигатель"), r, 0)
-        layout.addWidget(self.lbl_tel_motor_sel, r, 1)
-        r += 1
-        layout.addWidget(QtWidgets.QLabel("Тип двигателя"), r, 0)
-        layout.addWidget(self.lbl_tel_motor_type, r, 1)
-        r += 1
-        layout.addWidget(QtWidgets.QLabel("Авария перегрузки"), r, 0)
-        layout.addWidget(self.lbl_tel_overload, r, 1)
-        r += 1
-        layout.addWidget(QtWidgets.QLabel("Источник управления"), r, 0)
-        layout.addWidget(self.lbl_tel_ctrl_src, r, 1)
-        r += 1
-        layout.addWidget(QtWidgets.QLabel("Режим управления"), r, 0)
-        layout.addWidget(self.lbl_tel_mode, r, 1)
-        r += 1
-        layout.addWidget(QtWidgets.QLabel("Позиционное управление"), r, 0)
-        layout.addWidget(self.lbl_tel_position, r, 1)
-        r += 1
-        layout.addWidget(QtWidgets.QLabel("Тип вектора"), r, 0)
-        layout.addWidget(self.lbl_tel_vector, r, 1)
-        r += 1
-        layout.addWidget(QtWidgets.QLabel("RAW"), r, 0)
-        layout.addWidget(self.lbl_tel_state2_raw, r, 1)
-        r += 1
+        # --- Левая колонка (состояния и флаги) ---
+        left_items: list[tuple[str, Optional[QtWidgets.QLabel]]] = [
+            ("ПЧ слово состояния 1 (0x2100)", None),
+            ("Состояние", self.lbl_tel_state1),
+            ("RAW", self.lbl_tel_state1_raw),
+            ("ПЧ слово состояния 2 (0x2101)", None),
+            ("Готов к запуску", self.lbl_tel_ready),
+            ("Выбран двигатель", self.lbl_tel_motor_sel),
+            ("Тип двигателя", self.lbl_tel_motor_type),
+            ("Авария перегрузки", self.lbl_tel_overload),
+            ("Источник управления", self.lbl_tel_ctrl_src),
+            ("Режим управления", self.lbl_tel_mode),
+            ("Позиционное управление", self.lbl_tel_position),
+            ("Тип вектора", self.lbl_tel_vector),
+            ("RAW", self.lbl_tel_state2_raw),
+        ]
 
+        row = 0
+        for text, widget in left_items:
+            layout.addWidget(QtWidgets.QLabel(text), row, 0, 1, 2 if widget is None else 1)
+            if widget:
+                layout.addWidget(widget, row, 1)
+            row += 1
 
-        # Параллельная колонка с текущей частотой (справа сверху)
-        r=0
-        layout.addWidget(QtWidgets.QLabel("Рабочая частота, Гц"), r, 2)
-        layout.addWidget(self.lbl_tel_cur_freq, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Заданная частота, Гц"), r, 2)
-        layout.addWidget(self.lbl_tel_aim_freq, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Напряжение DC-шины"), r, 2)
-        layout.addWidget(self.lbl_tel_volt_DC, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Выходное напряжение"), r, 2)
-        layout.addWidget(self.lbl_tel_out_volt, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Выходной ток"), r, 2)
-        layout.addWidget(self.lbl_tel_out_cur, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Скорость вращения, об/мин"), r, 2)
-        layout.addWidget(self.lbl_tel_velocity, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Выходная мощность"), r, 2)
-        layout.addWidget(self.lbl_tel_out_power, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Выходная момент"), r, 2)
-        layout.addWidget(self.lbl_tel_out_torq, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Настройка замкнутого контура"), r, 2)
-        layout.addWidget(self.lbl_tel_out_close_loop, r, 3)
-        r+=1
-        
-        layout.addWidget(QtWidgets.QLabel("Обратная связь с замкнутым контуром"), r, 2)
-        layout.addWidget(self.lbl_tel_out_close_loop_feedback, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Состояние входов"), r, 2)
-        layout.addWidget(self.lbl_tel_input_state, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Состояние выходов"), r, 2)
-        layout.addWidget(self.lbl_tel_output_state, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Аналоговый вход 1"), r, 2)
-        layout.addWidget(self.lbl_tel_analog_input_1, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Аналоговый вход 2"), r, 2)
-        layout.addWidget(self.lbl_tel_analog_input_2, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Аналоговый вход 3"), r, 2)
-        layout.addWidget(self.lbl_tel_analog_input_3, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Аналоговый вход 4"), r, 2)
-        layout.addWidget(self.lbl_tel_analog_input_4, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Считывание сигнала высокоскоростного импульсного входа HDIA"), r, 2)
-        layout.addWidget(self.lbl_tel_read_input_of_HDIA, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Считывание сигнала высокоскоростного импульсного входа HDIB"), r, 2)
-        layout.addWidget(self.lbl_tel_read_input_of_HDIB, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Считывание текущего шага многоступенчатой скорости"), r, 2)
-        layout.addWidget(self.lbl_tel_read_current_step, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Внешняя длина"), r, 2)
-        layout.addWidget(self.lbl_tel_external_length, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Значение внешнего счетчика"), r, 2)
-        layout.addWidget(self.lbl_tel_external_count_value, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Задание крутящего момента"), r, 2)
-        layout.addWidget(self.lbl_tel_torq_setting, r, 3)
-        r+=1
-        layout.addWidget(QtWidgets.QLabel("Идентификационный код"), r, 2)
-        layout.addWidget(self.lbl_tel_id_code, r, 3)
-        r+=1
+        # --- Правая колонка (параметры и измерения) ---
+        right_items: list[tuple[str, QtWidgets.QLabel]] = [
+            ("Рабочая частота, Гц", self.lbl_tel_cur_freq),
+            ("Заданная частота, Гц", self.lbl_tel_aim_freq),
+            ("Напряжение DC-шины", self.lbl_tel_volt_DC),
+            ("Выходное напряжение", self.lbl_tel_out_volt),
+            ("Выходной ток", self.lbl_tel_out_cur),
+            ("Скорость вращения, об/мин", self.lbl_tel_velocity),
+            ("Выходная мощность", self.lbl_tel_out_power),
+            ("Выходной момент", self.lbl_tel_out_torq),
+            ("Настройка замкнутого контура", self.lbl_tel_out_close_loop),
+            ("Обратная связь с замкнутым контуром", self.lbl_tel_out_close_loop_feedback),
+            ("Состояние входов", self.lbl_tel_input_state),
+            ("Состояние выходов", self.lbl_tel_output_state),
+            ("Аналоговый вход 1", self.lbl_tel_analog_input_1),
+            ("Аналоговый вход 2", self.lbl_tel_analog_input_2),
+            ("Аналоговый вход 3", self.lbl_tel_analog_input_3),
+            ("Аналоговый вход 4", self.lbl_tel_analog_input_4),
+            ("Считывание сигнала высокоскоростного импульсного входа HDIA", self.lbl_tel_read_input_of_HDIA),
+            ("Считывание сигнала высокоскоростного импульсного входа HDIB", self.lbl_tel_read_input_of_HDIB),
+            ("Считывание текущего шага многоступенчатой скорости", self.lbl_tel_read_current_step),
+            ("Внешняя длина", self.lbl_tel_external_length),
+            ("Значение внешнего счетчика", self.lbl_tel_external_count_value),
+            ("Задание крутящего момента", self.lbl_tel_torq_setting),
+            ("Идентификационный код", self.lbl_tel_id_code),
+            ("Код ошибки", self.lbl_tel_fault_code),
+        ]
 
-        layout.addWidget(QtWidgets.QLabel("Код ошибки"), r, 2)
-        layout.addWidget(self.lbl_tel_fault_code, r, 3)
-        r+=1
+        row = 0
+        for text, widget in right_items:
+            layout.addWidget(QtWidgets.QLabel(text), row, 2)
+            layout.addWidget(widget, row, 3)
+            row += 1
 
-        layout.addWidget(self.btn_refresh_tel, r, 0)
-        layout.addWidget(self.chk_tel_auto, r, 1)
-        layout.addWidget(QtWidgets.QLabel("Период, мс"), r, 2)
-        layout.addWidget(self.spin_tel_period, r, 3)
+        # --- Нижние элементы управления ---
+        layout.addWidget(self.btn_refresh_tel, row, 0)
+        layout.addWidget(self.chk_tel_auto, row, 1)
+        layout.addWidget(QtWidgets.QLabel("Период, мс"), row, 2)
+        layout.addWidget(self.spin_tel_period, row, 3)
 
-        return page
+        return telemetry_group
+
 
     def on_refresh_telemetry(self) -> None:
         # print("on_refresh_telemetry")
